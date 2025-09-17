@@ -1,1 +1,0 @@
-# AppStorefit_Grupo1
