@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.appstorefit_grupo1.ui.screen.HomeScreen
+import com.example.appstorefit_grupo1.ui.screen.HomeScreen2
 import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
 
 class MainActivity : ComponentActivity() {
@@ -19,7 +20,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            HomeScreen()
+            HomeScreen2()
         }
     }
 }
@@ -35,5 +36,5 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    HomeScreen()
+    HomeScreen2()
 }
