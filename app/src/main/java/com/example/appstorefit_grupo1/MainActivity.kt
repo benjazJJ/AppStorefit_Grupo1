@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.appstorefit_grupo1.ui.screen.HomeScreen
 import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
 
 class MainActivity : ComponentActivity() {
@@ -18,14 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AppStoreFit_Grupo1Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Benjamín Palma",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            HomeScreen()
         }
     }
 }
@@ -41,7 +35,5 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    AppStoreFit_Grupo1Theme {
-        Greeting("Android")
-    }
+    HomeScreen()
 }

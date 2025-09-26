@@ -26,7 +26,7 @@ fun HomeScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mi App Kotlin") }
+                title = { Text("STOREFIT") }
             )
         }
     ) { innerPadding ->
