@@ -64,5 +64,5 @@ fun HomeScreenCompacta(){
 @Preview(name = "Compacta", widthDp = 320, heightDp = 800)
 @Composable
 fun HomeScreenCompactaPreview(){
-
+    HomeScreenCompacta()
 }
