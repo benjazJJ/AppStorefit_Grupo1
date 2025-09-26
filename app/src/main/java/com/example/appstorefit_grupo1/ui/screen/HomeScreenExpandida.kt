@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -31,7 +33,16 @@ fun HomeScreenExpandida(){
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ){
-            Column(modifier = Modifier.weight(1f)) {  }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Bienvenido",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Button(onClick = {}) {
+                    Text("Presioname...")
+                }
+            }
             Column(modifier = Modifier.weight(1f)) {  }
         }
     }
