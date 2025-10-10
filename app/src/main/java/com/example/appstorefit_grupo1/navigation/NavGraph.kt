@@ -1,93 +1,93 @@
 package com.example.appstorefit_grupo1.navigation
 
-import androidx.compose.foundation.layout.padding // Para aplicar innerPadding
-import androidx.compose.material3.Scaffold // Estructura base con slots
-import androidx.compose.runtime.Composable // Marcador composable
-import androidx.compose.ui.Modifier // Modificador
-import androidx.navigation.NavHostController // Controlador de navegación
-import androidx.navigation.compose.NavHost // Contenedor de destinos
-import androidx.navigation.compose.composable // Declarar cada destino
-import kotlinx.coroutines.launch // Para abrir/cerrar drawer con corrutinas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 
-import androidx.compose.material3.ModalNavigationDrawer // Drawer lateral modal
-import androidx.compose.material3.rememberDrawerState // Estado del drawer
-import androidx.compose.material3.DrawerValue // Valores (Opened/Closed)
-import androidx.compose.runtime.rememberCoroutineScope // Alcance de corrutina
+@Composable // Pantalla Home (sin formularios, solo navegación/diseño)
+fun HomeScreen(
+    onGoLogin: () -> Unit,   // Acción a Login
+    onGoRegister: () -> Unit // Acción a Registro
+) {
+    val bg = MaterialTheme.colorScheme.surfaceVariant // Fondo agradable para Home
 
-
-import com.example.uinavegacion.ui.components.AppTopBar // Barra superior
-import com.example.uinavegacion.ui.components.AppDrawer // Drawer composable
-import com.example.uinavegacion.ui.components.defaultDrawerItems // Ítems por defecto
-import com.example.uinavegacion.ui.screen.HomeScreen // Pantalla Home
-import com.example.uinavegacion.ui.screen.LoginScreenVm
-import com.example.uinavegacion.ui.screen.RegisterScreen // Pantalla Registro
-
-@Composable // Gráfico de navegación + Drawer + Scaffold
-fun AppNavGraph(navController: NavHostController) { // Recibe el controlador
-
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) // Estado del drawer
-    val scope = rememberCoroutineScope() // Necesario para abrir/cerrar drawer
-
-    // Helpers de navegación (reutilizamos en topbar/drawer/botones)
-    val goHome: () -> Unit    = { navController.navigate(Route.Home.path) }    // Ir a Home
-    val goLogin: () -> Unit   = { navController.navigate(Route.Login.path) }   // Ir a Login
-    val goRegister: () -> Unit = { navController.navigate(Route.Register.path) } // Ir a Registro
-
-    ModalNavigationDrawer( // Capa superior con drawer lateral
-        drawerState = drawerState, // Estado del drawer
-        drawerContent = { // Contenido del drawer (menú)
-            AppDrawer( // Nuestro componente Drawer
-                currentRoute = null, // Puedes pasar navController.currentBackStackEntry?.destination?.route
-                items = defaultDrawerItems( // Lista estándar
-                    onHome = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goHome() // Navega a Home
-                    },
-                    onLogin = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goLogin() // Navega a Login
-                    },
-                    onRegister = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goRegister() // Navega a Registro
-                    }
-                )
-            )
-        }
+    Box( // Contenedor a pantalla completa
+        modifier = Modifier
+            .fillMaxSize() // Ocupa todo
+            .background(bg) // Aplica fondo
+            .padding(16.dp), // Margen interior
+        contentAlignment = Alignment.Center // Centra contenido
     ) {
-        Scaffold( // Estructura base de pantalla
-            topBar = { // Barra superior con íconos/menú
-                AppTopBar(
-                    onOpenDrawer = { scope.launch { drawerState.open() } }, // Abre drawer
-                    onHome = goHome,     // Botón Home
-                    onLogin = goLogin,   // Botón Login
-                    onRegister = goRegister // Botón Registro
+        Column( // Estructura vertical
+            horizontalAlignment = Alignment.CenterHorizontally // Centra hijos
+        ) {
+            // Cabecera como Row (ejemplo de estructura)
+            Row(
+                verticalAlignment = Alignment.CenterVertically // Centra vertical
+            ) {
+                Text( // Título Home
+                    text = "Home",
+                    style = MaterialTheme.typography.headlineSmall, // Estilo título
+                    fontWeight = FontWeight.SemiBold // Seminegrita
+                )
+                Spacer(Modifier.width(8.dp)) // Separación horizontal
+                AssistChip( // Chip decorativo (Material 3)
+                    onClick = {}, // Sin acción (demo)
+                    label = { Text("Navega desde arriba o aquí") } // Texto chip
                 )
             }
-        ) { innerPadding -> // Padding que evita solapar contenido
-            NavHost( // Contenedor de destinos navegables
-                navController = navController, // Controlador
-                startDestination = Route.Home.path, // Inicio: Home
-                modifier = Modifier.padding(innerPadding) // Respeta topBar
+
+            Spacer(Modifier.height(20.dp)) // Separación
+
+            // Tarjeta con un mini “hero”
+            ElevatedCard( // Card elevada para remarcar contenido
+                modifier = Modifier.fillMaxWidth() // Ancho completo
             ) {
-                composable(Route.Home.path) { // Destino Home
-                    HomeScreen(
-                        onGoLogin = goLogin,     // Botón para ir a Login
-                        onGoRegister = goRegister // Botón para ir a Registro
+                Column(
+                    modifier = Modifier.padding(16.dp), // Margen interno de la card
+                    horizontalAlignment = Alignment.CenterHorizontally // Centrado
+                ) {
+                    Text(
+                        "Demostración de navegación con TopBar + Drawer + Botones",
+                        style = MaterialTheme.typography.titleMedium, // Estilo medio
+                        textAlign = TextAlign.Center // Alineación centrada
+                    )
+                    Spacer(Modifier.height(12.dp)) // Separación
+                    Text(
+                        "Usa la barra superior (íconos y menú), el menú lateral o estos botones.",
+                        style = MaterialTheme.typography.bodyMedium // Texto base
                     )
                 }
-                composable(Route.Login.path) { // Destino Login
-                    LoginScreenVm(
-                        onLoginOkNavigateHome = goHome,      // Botón para volver al Home
-                        onGoRegister = goRegister // Botón para ir a Registro
-                    )
-                }
-                composable(Route.Register.path) { // Destino Registro
-                    RegisterScreen(
-                        onRegistered = goLogin, // Botón para ir a Login
-                        onGoLogin = goLogin     // Botón alternativo a Login
-                    )
-                }
+            }
+
+            Spacer(Modifier.height(24.dp)) // Separación
+
+            // Botones de navegación principales
+            Row( // Dos botones en fila
+                horizontalArrangement = Arrangement.spacedBy(12.dp) // Espacio entre botones
+            ) {
+                Button(onClick = onGoLogin) { Text("Ir a Login") } // Navega a Login
+                OutlinedButton(onClick = onGoRegister) { Text("Ir a Registro") } // A Registro
             }
         }
     }
