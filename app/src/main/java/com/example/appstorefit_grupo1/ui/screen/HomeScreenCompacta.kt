@@ -46,14 +46,6 @@ fun HomeScreenCompacta(){
             Button(onClick = {}) {
                 Text("Presioname...")
             }
-            Image(
-                painter = painterResource(R.drawable.gatito),
-                contentDescription = "Logo App",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentScale = ContentScale.Fit
-            )
         }
     }
 }

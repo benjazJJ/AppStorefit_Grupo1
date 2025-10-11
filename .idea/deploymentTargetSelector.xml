@@ -5,18 +5,19 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="HomeScreenPreview">
+      <SelectionState runConfigName="PreviewLogin_InteractiveValidated">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-10-10T20:50:55.827079600Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\bpalm\.android\avd\Medium_Phone.avd" />
-            </handle>
-          </Target>
-        </DropdownSelection>
-        <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="GreetingPreview">
+      <SelectionState runConfigName="HomeScreenCompactaPreview">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="HomeScreenExpandidaPreview">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="ProductosScreenPreview">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="AppTopBarPreview">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

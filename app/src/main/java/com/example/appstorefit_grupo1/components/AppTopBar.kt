@@ -18,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,4 +79,14 @@ fun AppTopBar(
             }
         }
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AppTopBarPreview(){
+    AppTopBar(
+        onHome = {},
+        onLogin = {},
+        onRegister = {},
+        onOpenDrawer = {})
 }

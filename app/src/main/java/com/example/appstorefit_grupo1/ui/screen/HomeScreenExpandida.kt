@@ -50,14 +50,6 @@ fun HomeScreenExpandida(){
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
-                Image(
-                    painter = painterResource(R.drawable.gatito),
-                    contentDescription = "Logo App",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    contentScale = ContentScale.Crop
-                )
             }
         }
     }

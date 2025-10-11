@@ -1,205 +1,289 @@
 package com.example.appstorefit_grupo1.ui.screen
 
-import androidx.compose.foundation.background                 // Fondo
-import androidx.compose.foundation.layout.*                   // Box/Column/Row/Spacer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons                  // Íconos Material
-import androidx.compose.material.icons.filled.Visibility      // Ícono mostrar contraseña
-import androidx.compose.material.icons.filled.VisibilityOff   // Ícono ocultar contraseña
-import androidx.compose.material3.*                           // Material 3
-import androidx.compose.runtime.*                             // remember y Composable
-import androidx.compose.ui.Alignment                          // Alineaciones
-import androidx.compose.ui.Modifier                           // Modificador
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.*                       // KeyboardOptions/Types/Transformations
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp                            // DPs
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observa StateFlow con lifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel         // Obtiene ViewModel // Nuestro ViewModel
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.domain.validation.validateEmail
 import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
 
-
-//1 Lo primero que creamos en el archivo
-@Composable                                                  // Pantalla Login conectada al VM
+// 1) Pantalla Login conectada al VIEWMODEL
+@Composable
 fun LoginScreenVm(
-    onLoginOkNavigateHome: () -> Unit,                       // Navega a Home cuando el login es exitoso
-    onGoRegister: () -> Unit                                 // Navega a Registro
+    onLoginOkNavigateHome: () -> Unit,
+    onGoRegister: () -> Unit
 ) {
-    val vm: AuthViewModel = viewModel()                      // Crea/obtiene VM
-    val state by vm.login.collectAsStateWithLifecycle()      // Observa el StateFlow en tiempo real
+    val vm: AuthViewModel = viewModel()
+    val state by vm.login.collectAsStateWithLifecycle()
 
-    if (state.success) {                                     // Si login fue exitoso…
-        vm.clearLoginResult()                                // Limpia banderas
-        onLoginOkNavigateHome()                              // Navega a Home
+    if (state.success) {
+        vm.clearLoginResult()
+        onLoginOkNavigateHome()
     }
 
-    LoginScreen(                                             // Delegamos a UI presentacional
-        email = state.email,                                 // Valor de email
-        pass = state.pass,                                   // Valor de password
-        emailError = state.emailError,                       // Error de email
-        passError = state.passError,                         // (Opcional) error de pass en login
-        canSubmit = state.canSubmit,                         // Habilitar botón
-        isSubmitting = state.isSubmitting,                   // Loading
-        errorMsg = state.errorMsg,                           // Error global
-        onEmailChange = vm::onLoginEmailChange,              // Handler email
-        onPassChange = vm::onLoginPassChange,                // Handler pass
-        onSubmit = vm::submitLogin,                          // Acción enviar
-        onGoRegister = onGoRegister                          // Ir a Registro
+    LoginScreen(
+        email = state.email,
+        pass = state.pass,
+        emailError = state.emailError,
+        passError = state.passError,
+        canSubmit = state.canSubmit,
+        isSubmitting = state.isSubmitting,
+        errorMsg = state.errorMsg,
+        onEmailChange = vm::onLoginEmailChange,
+        onPassChange = vm::onLoginPassChange,
+        onSubmit = vm::submitLogin,
+        onGoRegister = onGoRegister
     )
 }
-
-
-//2 modificamos la funcion principal haciendo private y agregando variable y elementos dle fiormulario
-@Composable // Pantalla Login (solo navegación, sin formularios)
-private fun LoginScreen(
-    //3 Modificamos estos parametros
-    email: String,                                           // Campo email
-    pass: String,                                            // Campo contraseña
-    emailError: String?,                                     // Error de email
-    passError: String?,                                      // Error de password (opcional)
-    canSubmit: Boolean,                                      // Habilitar botón
-    isSubmitting: Boolean,                                   // Flag loading
-    errorMsg: String?,                                       // Error global (credenciales)
-    onEmailChange: (String) -> Unit,                         // Handler cambio email
-    onPassChange: (String) -> Unit,                          // Handler cambio password
-    onSubmit: () -> Unit,                                    // Acción enviar
-    onGoRegister: () -> Unit                                 // Acción ir a registro
+//2) Diseño de la pantalla
+//BOTÓN CON DEGRADADO PARA "ENTRAR"
+@Composable
+private fun GradientButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false
 ) {
-    val bg = MaterialTheme.colorScheme.background // Fondo distinto para contraste
-    //4 Agregamos la siguiente linea
-    var showPass by remember { mutableStateOf(false) }        // Estado local para mostrar/ocultar contraseña
-
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize() // Ocupa todo
-            .background(bg) // Fondo
-            .padding(16.dp), // Margen
-        contentAlignment = Alignment.Center // Centro
+    val cs = MaterialTheme.colorScheme
+    val gradient = Brush.horizontalGradient(
+        colors = listOf(
+            cs.tertiary,   // teal
+            cs.primary,    // azul
+            cs.secondary   // morado
+        )
+    )
+    Surface(
+        enabled = enabled,
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = Color.Transparent,
+        contentColor = cs.onPrimary,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        modifier = modifier
     ) {
-
-        Column(
-            //5 Anexamos el modificador
-            modifier = Modifier.fillMaxWidth(),              // Ancho completo
-            horizontalAlignment = Alignment.CenterHorizontally // Centrado horizontal
+        Box(
+            modifier = Modifier
+                .background(gradient, RoundedCornerShape(10.dp))
+                .padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Iniciar Sesión",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold// Título
-            )
-            Spacer(Modifier.height(12.dp)) // Separación
-
-            Text(
-                text = "Bienvendi@ a StoreFit",
-                textAlign = TextAlign.Center // Alineación centrada
-            )
-            Spacer(Modifier.height(20.dp)) // Separación
-
-            //5 Borramos los elementos anteriores y comenzamos a agregar los elementos dle formulario
-// ---------- EMAIL ----------
-            OutlinedTextField(
-                value = email,                               // Valor actual
-                onValueChange = onEmailChange,               // Notifica VM (valida email)
-                label = { Text("Email") },                   // Etiqueta
-                singleLine = true,                           // Una línea
-                isError = emailError != null,                // Marca error si corresponde
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email        // Teclado de email
-                ),
-                modifier = Modifier.fillMaxWidth()           // Ancho completo
-            )
-            if (emailError != null) {                        // Muestra mensaje si hay error
-                Text(emailError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
-            }
-
-            Spacer(Modifier.height(8.dp))                    // Espacio
-
-            // ---------- PASSWORD (oculta por defecto) ----------
-            var passTouched by remember { mutableStateOf(false) }
-
-            val showPassError = passTouched && (passError != null || pass.isBlank())
-            val passErrorMsg = passError ?: "Campo obligatorio"
-
-            OutlinedTextField(
-                value = pass,
-                onValueChange = {
-                    passTouched = true          // ya interactuó
-                    onPassChange(it)
-                },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(onClick = { showPass = !showPass }) {
-                        Icon(
-                            imageVector = if (showPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (showPass) "Ocultar contraseña" else "Mostrar contraseña"
-                        )
-                    }
-                },
-                isError = showPassError,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged() { if (!it.isFocused) passTouched = true } //Cuando pierde foco
-            )
-
-            if (showPassError) {
-                Text(
-                    passErrorMsg,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))                   // Espacio
-
-            // ---------- BOTÓN ENTRAR ----------
-            Button(
-                onClick = onSubmit,                          // Envía login
-                enabled = canSubmit && !isSubmitting,        // Solo si válido y no cargando
-                modifier = Modifier.fillMaxWidth()           // Ancho completo
-            ) {
-                if (isSubmitting) {                          // UI de carga
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Validando...")
-                } else {
-                    Text("Entrar")
+            if (loading) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(end = 8.dp),
+                        color = cs.onPrimary
+                    )
+                    Text(text)
                 }
+            } else {
+                Text(text)
             }
-
-            if (errorMsg != null) {                          // Error global
-                Spacer(Modifier.height(8.dp))
-                Text(errorMsg, color = MaterialTheme.colorScheme.error)
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            // ---------- BOTÓN IR A REGISTRO ----------
-            OutlinedButton(onClick = onGoRegister, modifier = Modifier.fillMaxWidth()) {
-                Text("Crear cuenta")
-            }
-            //fin modificacion de formulario
         }
     }
 }
 
-//ESTO ES PARA VISTA PREVIA DE LA PANTALLA DE LOGIN
+@Composable
+private fun LoginScreen(
+    email: String,
+    pass: String,
+    emailError: String?,
+    passError: String?,
+    canSubmit: Boolean,
+    isSubmitting: Boolean,
+    errorMsg: String?,
+    onEmailChange: (String) -> Unit,
+    onPassChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onGoRegister: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    var showPass by rememberSaveable { mutableStateOf(false) }
+    var passTouched by rememberSaveable { mutableStateOf(false) }
 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(cs.surfaceVariant)  // fondo suave tipo web
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 420.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Iniciar sesión",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = cs.onSurface,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Bienvenid@ a StoreFit",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = cs.onSurfaceVariant
+                )
+                Spacer(Modifier.height(20.dp))
+
+                // -------- EMAIL --------
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    isError = emailError != null,
+                    supportingText = {
+                        if (emailError != null) {
+                            Text(emailError, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = cs.primary,
+                        unfocusedBorderColor = cs.outline,
+                        focusedLabelColor = cs.primary,
+                        cursorColor = cs.primary,
+                        focusedContainerColor = cs.surface,
+                        unfocusedContainerColor = cs.surface
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                // -------- PASSWORD --------
+                val showPassError = passTouched && (passError != null || pass.isBlank())
+                val passErrorMsg = passError ?: "Campo obligatorio"
+
+                OutlinedTextField(
+                    value = pass,
+                    onValueChange = {
+                        if (!passTouched) passTouched = true
+                        onPassChange(it)
+                    },
+                    label = { Text("Contraseña") },
+                    singleLine = true,
+                    visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showPass = !showPass }) {
+                            Icon(
+                                imageVector = if (showPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = if (showPass) "Ocultar contraseña" else "Mostrar contraseña",
+                                tint = cs.onSurfaceVariant
+                            )
+                        }
+                    },
+                    isError = showPassError,
+                    supportingText = {
+                        if (showPassError) {
+                            Text(passErrorMsg, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { if (canSubmit && !isSubmitting) onSubmit() }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = cs.primary,
+                        unfocusedBorderColor = cs.outline,
+                        focusedLabelColor = cs.primary,
+                        cursorColor = cs.primary,
+                        focusedContainerColor = cs.surface,
+                        unfocusedContainerColor = cs.surface
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { if (!it.isFocused) passTouched = true }
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                // -------- BOTÓN ENTRAR--------
+                GradientButton(
+                    text = if (isSubmitting) "Validando…" else "Entrar",
+                    enabled = canSubmit && !isSubmitting,
+                    loading = isSubmitting,
+                    onClick = onSubmit,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (errorMsg != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        errorMsg,
+                        color = cs.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // -------- BOTÓN IR A REGISTRO--------
+                OutlinedButton(
+                    onClick = onGoRegister,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary),
+                    border = ButtonDefaults.outlinedButtonBorder
+                ) {
+                    Text("Crear cuenta")
+                }
+            }
+        }
+    }
+}
+
+// 3) PREVIEW
 @Preview(showBackground = true, name = "Login")
 @Composable
 fun PreviewLogin_InteractiveValidated() {
     var email by remember { mutableStateOf("") }
-    var pass  by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
 
-    //Validamos para que el botón funcione o no
     val emailErr: String? = validateEmail(email)
-    val passErr: String? = null //solo que no esté vacío
+    val passErr: String? = null
     val can = emailErr == null && email.isNotBlank() && pass.isNotBlank()
 
     AppStoreFit_Grupo1Theme {
@@ -213,9 +297,8 @@ fun PreviewLogin_InteractiveValidated() {
             errorMsg = null,
             onEmailChange = { email = it },
             onPassChange = { pass = it },
-            onSubmit = { /* no-op en preview */ },
-            onGoRegister = { /* no-op en preview */ }
+            onSubmit = { },
+            onGoRegister = { }
         )
     }
 }
-
