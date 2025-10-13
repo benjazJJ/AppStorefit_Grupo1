@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
+import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -30,9 +31,12 @@ import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.domain.validation.validateEmail
 import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
 
-// 1) Pantalla Login conectada al VIEWMODEL
+/* =========================
+ * 1) Pantalla Login (VM)
+ * ========================= */
 @Composable
 fun LoginScreenVm(
+    widthClass: WindowWidthSizeClass,
     onLoginOkNavigateHome: () -> Unit,
     onGoRegister: () -> Unit
 ) {
@@ -45,6 +49,7 @@ fun LoginScreenVm(
     }
 
     LoginScreen(
+        widthClass = widthClass,
         email = state.email,
         pass = state.pass,
         emailError = state.emailError,
@@ -58,8 +63,10 @@ fun LoginScreenVm(
         onGoRegister = onGoRegister
     )
 }
-//2) Diseño de la pantalla
-//BOTÓN CON DEGRADADO PARA "ENTRAR"
+
+/* =======================================================
+ * 2) Botón con degradado (igual a tu diseño)
+ * ======================================================= */
 @Composable
 private fun GradientButton(
     text: String,
@@ -70,11 +77,7 @@ private fun GradientButton(
 ) {
     val cs = MaterialTheme.colorScheme
     val gradient = Brush.horizontalGradient(
-        colors = listOf(
-            cs.tertiary,   // teal
-            cs.primary,    // azul
-            cs.secondary   // morado
-        )
+        colors = listOf(cs.tertiary, cs.primary, cs.secondary)
     )
     Surface(
         enabled = enabled,
@@ -110,8 +113,13 @@ private fun GradientButton(
     }
 }
 
+/* ============================================
+ * 3) Diseño Login responsive con widthClass
+ * ============================================ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoginScreen(
+    widthClass: WindowWidthSizeClass,
     email: String,
     pass: String,
     emailError: String?,
@@ -125,13 +133,19 @@ private fun LoginScreen(
     onGoRegister: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
+    val maxW = when (widthClass) {
+        WindowWidthSizeClass.Expanded -> 600.dp
+        WindowWidthSizeClass.Medium   -> 520.dp
+        else                          -> 360.dp
+    }
+
     var showPass by rememberSaveable { mutableStateOf(false) }
     var passTouched by rememberSaveable { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(cs.surfaceVariant)  // fondo suave tipo web
+            .background(cs.surfaceVariant)
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -140,7 +154,7 @@ private fun LoginScreen(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 420.dp)
+                .widthIn(max = maxW) // 👈 responsive por size class
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
@@ -240,7 +254,7 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // -------- BOTÓN ENTRAR--------
+                // -------- BOTÓN ENTRAR --------
                 GradientButton(
                     text = if (isSubmitting) "Validando…" else "Entrar",
                     enabled = canSubmit && !isSubmitting,
@@ -261,7 +275,7 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // -------- BOTÓN IR A REGISTRO--------
+                // -------- BOTÓN IR A REGISTRO --------
                 OutlinedButton(
                     onClick = onGoRegister,
                     modifier = Modifier.fillMaxWidth(),
@@ -275,19 +289,48 @@ private fun LoginScreen(
     }
 }
 
-// 3) PREVIEW
-@Preview(showBackground = true, name = "Login")
+/* ================
+ * 4) Previews
+ * ================ */
+@Preview(showBackground = true, name = "Login – Compacta", widthDp = 360, heightDp = 800, showSystemUi = true)
 @Composable
-fun PreviewLogin_InteractiveValidated() {
+fun PreviewLogin_Compact() {
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
-
     val emailErr: String? = validateEmail(email)
     val passErr: String? = null
     val can = emailErr == null && email.isNotBlank() && pass.isNotBlank()
 
     AppStoreFit_Grupo1Theme {
         LoginScreen(
+            widthClass = WindowWidthSizeClass.Compact,
+            email = email,
+            pass = pass,
+            emailError = emailErr,
+            passError = passErr,
+            canSubmit = can,
+            isSubmitting = false,
+            errorMsg = null,
+            onEmailChange = { email = it },
+            onPassChange = { pass = it },
+            onSubmit = { },
+            onGoRegister = { }
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Login – Expandida", widthDp = 1000, heightDp = 800, showSystemUi = true)
+@Composable
+fun PreviewLogin_Expanded() {
+    var email by remember { mutableStateOf("") }
+    var pass by remember { mutableStateOf("") }
+    val emailErr: String? = validateEmail(email)
+    val passErr: String? = null
+    val can = emailErr == null && email.isNotBlank() && pass.isNotBlank()
+
+    AppStoreFit_Grupo1Theme {
+        LoginScreen(
+            widthClass = WindowWidthSizeClass.Expanded,
             email = email,
             pass = pass,
             emailError = emailErr,
