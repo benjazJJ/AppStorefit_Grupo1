@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person            // <-- NUEVO
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -33,10 +34,11 @@ private data class TopDest(
 )
 
 // Ajusta esta lista según las pantallas principales que tengas listas.
-// (Por ahora: Home y Productos. Cuando tengas Carrito/Perfil, los agregas aquí.)
+// (Por ahora: Home y Productos. Agregamos Perfil. Si Carrito está listo, lo agregas acá también.)
 private val TOP_DESTINATIONS = listOf(
     TopDest(Route.Home.path, "Inicio", Icons.Filled.Home),
     TopDest(Route.Productos.path, "Productos", Icons.Filled.ShoppingCart),
+    TopDest(Route.Perfil.path, "Perfil", Icons.Filled.Person) // <-- AGREGADO
 )
 
 @Composable
@@ -164,10 +166,17 @@ private fun GraphHost(
             ProductosScreen(widthClass = widthClass, nav = navController)
         }
 
-        // Cuando implementes estas, agrégalas también a TOP_DESTINATIONS si quieres que aparezcan en la barra/rail:
-        // composable(Route.Carrito.path)       { CarritoScreen(widthClass, navController) }
-        // composable(Route.Configuracion.path) { ConfigScreen(widthClass, navController) }
-        // composable(Route.Perfil.path)        { PerfilScreen(widthClass, navController) }
-        // composable(Route.EditarPerfil.path)  { EditarPerfilScreen(widthClass, navController) }
+        // ---- PERFIL (ver perfil) ----
+        composable(Route.Perfil.path) {
+            PerfilScreen(navController = navController)
+        }
+
+        composable(Route.EditarContrasena.path) {
+            EditarContrasenaScreen(navController = navController)
+        }
+
+        // Si quieres habilitar Carrito YA, agrega su pantalla y (opcional) súmalo a TOP_DESTINATIONS:
+        // composable(Route.Carrito.path)       { CarritoScreen(widthClass = widthClass, navController) }
+        // composable(Route.EditarPerfil.path)  { EditarPerfilScreen(widthClass = widthClass, navController) }
     }
 }
