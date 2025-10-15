@@ -9,7 +9,7 @@ import androidx.room.Query
 interface UserDao{
     //Insertar daos en la tabla
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertar(): Long
+    suspend fun insertar(user: UserEntity): Long
 
     //obtener todos los datos de 1 usuario mediante su correo
     @Query("SELECT * FROM users WHERE email = :email")

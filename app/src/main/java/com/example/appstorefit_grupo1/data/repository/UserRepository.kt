@@ -8,9 +8,9 @@ class UserRepository (
     private val userDao: UserDao
 ){
     //login
-    suspend fun login(email: String, pass: String): Result<UserEntity> {
+    suspend fun login(email:String, pass: String): Result<UserEntity>{
         val user = userDao.getByEmail(email)
-        return if (user != null && user.pass == pass) {
+        return if(user != null && user.pass == pass){
             Result.success(user)
         }
         else{
@@ -19,10 +19,22 @@ class UserRepository (
     }
 
     //registro
-
-    //suspend fun register(name: String, email: String, phone: String, pass: String): Result<>
-    //val exist = userDao.getByEmail(email) != null
-    //if(exist){
-    //    return
+    suspend fun register(name: String, email: String, phone: String, pass: String): Result<Long>{
+        val exists = userDao.getByEmail(email) != null
+        if(exists){
+            return Result.failure(IllegalArgumentException("Corre en uso"))
+        }
+        else{
+            val id = userDao.insertar(
+                UserEntity(
+                    name = name,
+                    email = email,
+                    phone = phone,
+                    pass = pass
+                )
+            )
+            return Result.success(id)
+        }
     }
- //TERMINAR, COPIAR Y PEGAR EL DEL PROFE
+
+}
