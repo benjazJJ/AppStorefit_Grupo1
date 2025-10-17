@@ -1,5 +1,10 @@
 package com.example.appstorefit_grupo1.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -184,9 +189,16 @@ private fun LoginScreen(
                     singleLine = true,
                     isError = emailError != null,
                     supportingText = {
-                        if (emailError != null) {
-                            Text(emailError, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                        AnimatedVisibility(
+                            visible = emailError != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            if (emailError != null) {
+                                Text(emailError, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
+
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
