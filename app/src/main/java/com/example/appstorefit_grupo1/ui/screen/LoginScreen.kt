@@ -36,11 +36,12 @@ import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
  * ========================= */
 @Composable
 fun LoginScreenVm(
+    vm: AuthViewModel,
     widthClass: WindowWidthSizeClass,
     onLoginOkNavigateHome: () -> Unit,
     onGoRegister: () -> Unit
 ) {
-    val vm: AuthViewModel = viewModel()
+    //val vm: AuthViewModel = viewModel()
     val state by vm.login.collectAsStateWithLifecycle()
 
     if (state.success) {
