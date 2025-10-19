@@ -22,7 +22,7 @@ class UserRepository (
     suspend fun register(name: String, email: String, phone: String, pass: String): Result<Long>{
         val exists = userDao.getByEmail(email) != null
         if(exists){
-            return Result.failure(IllegalArgumentException("Corre en uso"))
+            return Result.failure(IllegalArgumentException("Correo en uso"))
         }
         else{
             val id = userDao.insertar(

@@ -71,7 +71,7 @@ fun LoginScreenVm(
 }
 
 /* =======================================================
- * 2) Botón con degradado (igual a tu diseño)
+ * 2) Botón con degradado
  * ======================================================= */
 @Composable
 private fun GradientButton(
@@ -160,7 +160,7 @@ private fun LoginScreen(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = maxW) // 👈 responsive por size class
+                .widthIn(max = maxW)
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
