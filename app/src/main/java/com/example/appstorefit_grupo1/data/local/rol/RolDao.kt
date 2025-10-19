@@ -8,7 +8,6 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
-
 @Dao
 interface RolDao {
     @Query("SELECT * FROM rol ORDER BY nombre_rol")
@@ -17,7 +16,10 @@ interface RolDao {
     @Query("SELECT * FROM rol WHERE rol_id = :id LIMIT 1")
     suspend fun getById(id: Long): RolEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Query("SELECT * FROM rol WHERE nombre_rol = :name LIMIT 1")
+    suspend fun getByName(name: String): RolEntity?
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(rol: RolEntity): Long
 
     @Update
@@ -25,4 +27,8 @@ interface RolDao {
 
     @Delete
     suspend fun delete(rol: RolEntity)
+
+    @Query("SELECT COUNT(*) FROM rol")
+    suspend fun count(): Int
+
 }
