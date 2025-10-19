@@ -28,10 +28,10 @@ data class RegistroEntity(
     val rolId: Long,                  // 1=Cliente, 2=Admin, 3=Soporte
 
     @ColumnInfo(name = "usuario")
-    val usuario: String,              // PROF: usaremos el email como 'usuario'
+    val usuario: String,
 
     @ColumnInfo(name = "contrasenia")
-    val contrasenia: String,          // PROF: en prod debe ir hasheada
+    val contrasenia: String,
 
     @ColumnInfo(name = "rut")
     val rut: String,                  // FK a usuarios.rut

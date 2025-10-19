@@ -50,8 +50,7 @@ class UserRepository(
                 phone = phone,
                 lastName = "",
                 address = "",
-                birthDate = "",
-                registerDate = ""
+                birthDate = ""
             )
         )
 

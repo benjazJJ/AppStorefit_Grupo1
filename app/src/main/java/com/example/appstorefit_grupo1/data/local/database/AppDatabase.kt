@@ -1,6 +1,5 @@
 package com.example.appstorefit_grupo1.data.local.database
 
-//importaciones
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -50,7 +49,6 @@ abstract class AppDatabase : RoomDatabase() {
                             super.onCreate(db)
                             // lanzar una corutina para los insert de las tablas
                             CoroutineScope(Dispatchers.IO).launch {
-                                // ====== ROLES (IDs fijos 1,2,3) ======
                                 kotlin.runCatching {
                                     val rDao = getInstance(context).rolDao()
                                     val rolesCount = rDao.count()
@@ -62,7 +60,6 @@ abstract class AppDatabase : RoomDatabase() {
                                     }
                                 }
 
-                                // ====== USUARIOS + REGISTRO (según modelo) ======
                                 kotlin.runCatching {
                                     val uDao = getInstance(context).userDao()
                                     val regDao = getInstance(context).registroDao()
@@ -97,10 +94,9 @@ abstract class AppDatabase : RoomDatabase() {
                                                 name = "Jose",
                                                 email = "b@b.cl",
                                                 phone = "12345678",
-                                                lastName = "",
-                                                address = "",
-                                                birthDate = "",
-                                                registerDate = ""
+                                                lastName = "Perez",
+                                                address = "Av. Felicia 213",
+                                                birthDate = "05/05/1990",
                                             )
                                         )
                                         regDao.insertar(

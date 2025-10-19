@@ -30,8 +30,5 @@ data class UserEntity(
     val address: String = "",
 
     @ColumnInfo(name = "fec_nac")
-    val birthDate: String = "",
-
-    @ColumnInfo(name = "fecha_registro")
-    val registerDate: String = ""
+    val birthDate: String = ""
 )
