@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.appstorefit_grupo1.data.local.Categoria.CategoriaDao
+import com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity
 import com.example.appstorefit_grupo1.data.local.registro.RegistroDao
 import com.example.appstorefit_grupo1.data.local.registro.RegistroEntity
 import com.example.appstorefit_grupo1.data.local.rol.RolDao
@@ -16,9 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    // añadir aquí todas las entidades que usará la app
-    entities = [UserEntity::class, RegistroEntity::class, RolEntity::class],
-    // aumentar la versión cuando se agregan/alteran entidades
+    // añadir aquí todas las entidades que usará la app (agregada CategoriaEntity)
+    entities = [UserEntity::class, RegistroEntity::class, RolEntity::class, CategoriaEntity::class],
+
     version = 4,
     exportSchema = true
 )
@@ -26,6 +28,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun registroDao(): RegistroDao
     abstract fun rolDao(): RolDao
+    abstract fun categoriaDao(): CategoriaDao
 
     companion object {
         @Volatile
@@ -109,6 +112,20 @@ abstract class AppDatabase : RoomDatabase() {
                                         )
                                     }
                                 }.onFailure {
+                                    // opcional: log o manejo del fallo
+                                }
+
+                                // ====== CATEGORÍAS (seed) ======
+                                kotlin.runCatching {
+                                    val cDao = getInstance(context).categoriaDao()
+                                    val catCount = cDao.count()
+                                    if (catCount == 0) {
+                                        cDao.insert(CategoriaEntity(nombre = "Remeras", descripcion = "Remeras deportivas"))
+                                        cDao.insert(CategoriaEntity(nombre = "Zapatillas", descripcion = "Calzado deportivo"))
+                                        cDao.insert(CategoriaEntity(nombre = "Gorras", descripcion = "Gorras y accesorios"))
+                                    }
+                                }.onFailure {
+                                    // opcional: log o manejo del fallo
                                 }
                             }
                         }
