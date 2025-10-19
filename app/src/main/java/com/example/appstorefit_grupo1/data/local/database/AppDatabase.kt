@@ -1,5 +1,6 @@
 package com.example.appstorefit_grupo1.data.local.database
 
+//importaciones
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
