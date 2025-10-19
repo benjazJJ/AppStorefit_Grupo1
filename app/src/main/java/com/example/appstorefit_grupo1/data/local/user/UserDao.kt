@@ -6,20 +6,24 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 
 @Dao
-interface UserDao{
-    //Insertar daos en la tabla
+interface UserDao {
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertar(user: UserEntity): Long
 
-    //obtener todos los datos de 1 usuario mediante su correo
-    @Query("SELECT * FROM users WHERE email = :email")
-    suspend fun  getByEmail(email: String): UserEntity?
+    // Obtener un usuario por email
+    @Query("SELECT * FROM usuarios WHERE correo_electronico = :email LIMIT 1")
+    suspend fun getByEmail(email: String): UserEntity?
 
-    //obtener los datos de tososa los usuarios
-    @Query("SELECT * FROM users ORDER BY id ASC")
+    // Obtener un usuario por rut
+    @Query("SELECT * FROM usuarios WHERE rut = :rut LIMIT 1")
+    suspend fun getByRut(rut: String): UserEntity?
+
+    // Obtener todos los usuarios
+    @Query("SELECT * FROM usuarios ORDER BY rut ASC")
     suspend fun getAll(): List<UserEntity>
 
-    //obtener cantidad de registros de la tabla
-    @Query("SELECT COUNT(*) FROM users")
+    // Cantidad de registros
+    @Query("SELECT COUNT(*) FROM usuarios")
     suspend fun count(): Int
 }
