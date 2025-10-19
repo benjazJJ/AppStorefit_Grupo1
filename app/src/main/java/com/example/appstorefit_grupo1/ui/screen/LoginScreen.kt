@@ -22,31 +22,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
-import com.example.appstorefit_grupo1.domain.validation.validateEmail
-import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
+import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
+import com.example.appstorefit_grupo1.data.repository.UserRepository
 
-/* =========================
- * 1) Pantalla Login (VM)
- * ========================= */
 @Composable
 fun LoginScreenVm(
-    vm: AuthViewModel,
     widthClass: WindowWidthSizeClass,
     onLoginOkNavigateHome: () -> Unit,
     onGoRegister: () -> Unit
 ) {
-    //val vm: AuthViewModel = viewModel()
+    val context = LocalContext.current
+    val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
+
     val state by vm.login.collectAsStateWithLifecycle()
 
     if (state.success) {
@@ -70,9 +68,6 @@ fun LoginScreenVm(
     )
 }
 
-/* =======================================================
- * 2) Botón con degradado
- * ======================================================= */
 @Composable
 private fun GradientButton(
     text: String,
@@ -119,9 +114,6 @@ private fun GradientButton(
     }
 }
 
-/* ============================================
- * 3) Diseño Login responsive con widthClass
- * ============================================ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoginScreen(
@@ -136,7 +128,7 @@ private fun LoginScreen(
     onEmailChange: (String) -> Unit,
     onPassChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onGoRegister: () -> Unit
+    onGoRegister: () -> Unit,
 ) {
     val cs = MaterialTheme.colorScheme
     val maxW = when (widthClass) {
@@ -181,7 +173,6 @@ private fun LoginScreen(
                 )
                 Spacer(Modifier.height(20.dp))
 
-                // -------- EMAIL --------
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -198,7 +189,6 @@ private fun LoginScreen(
                                 Text(emailError, color = cs.error, style = MaterialTheme.typography.labelSmall)
                             }
                         }
-
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -217,7 +207,6 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // -------- PASSWORD --------
                 val showPassError = passTouched && (passError != null || pass.isBlank())
                 val passErrorMsg = passError ?: "Campo obligatorio"
 
@@ -235,7 +224,6 @@ private fun LoginScreen(
                             Icon(
                                 imageVector = if (showPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                 contentDescription = if (showPass) "Ocultar contraseña" else "Mostrar contraseña",
-                                tint = cs.onSurfaceVariant
                             )
                         }
                     },
@@ -252,14 +240,6 @@ private fun LoginScreen(
                     keyboardActions = KeyboardActions(
                         onDone = { if (canSubmit && !isSubmitting) onSubmit() }
                     ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = cs.primary,
-                        unfocusedBorderColor = cs.outline,
-                        focusedLabelColor = cs.primary,
-                        cursorColor = cs.primary,
-                        focusedContainerColor = cs.surface,
-                        unfocusedContainerColor = cs.surface
-                    ),
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { if (!it.isFocused) passTouched = true }
@@ -267,7 +247,6 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // -------- BOTÓN ENTRAR --------
                 GradientButton(
                     text = if (isSubmitting) "Validando…" else "Entrar",
                     enabled = canSubmit && !isSubmitting,
@@ -288,73 +267,11 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // -------- BOTÓN IR A REGISTRO --------
                 OutlinedButton(
                     onClick = onGoRegister,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.primary),
-                    border = ButtonDefaults.outlinedButtonBorder
-                ) {
-                    Text("Crear cuenta")
-                }
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Crear cuenta") }
             }
         }
-    }
-}
-
-/* ================
- * 4) Previews
- * ================ */
-@Preview(showBackground = true, name = "Login – Compacta", widthDp = 360, heightDp = 800, showSystemUi = true)
-@Composable
-fun PreviewLogin_Compact() {
-    var email by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    val emailErr: String? = validateEmail(email)
-    val passErr: String? = null
-    val can = emailErr == null && email.isNotBlank() && pass.isNotBlank()
-
-    AppStoreFit_Grupo1Theme {
-        LoginScreen(
-            widthClass = WindowWidthSizeClass.Compact,
-            email = email,
-            pass = pass,
-            emailError = emailErr,
-            passError = passErr,
-            canSubmit = can,
-            isSubmitting = false,
-            errorMsg = null,
-            onEmailChange = { email = it },
-            onPassChange = { pass = it },
-            onSubmit = { },
-            onGoRegister = { }
-        )
-    }
-}
-
-@Preview(showBackground = true, name = "Login – Expandida", widthDp = 1000, heightDp = 800, showSystemUi = true)
-@Composable
-fun PreviewLogin_Expanded() {
-    var email by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    val emailErr: String? = validateEmail(email)
-    val passErr: String? = null
-    val can = emailErr == null && email.isNotBlank() && pass.isNotBlank()
-
-    AppStoreFit_Grupo1Theme {
-        LoginScreen(
-            widthClass = WindowWidthSizeClass.Expanded,
-            email = email,
-            pass = pass,
-            emailError = emailErr,
-            passError = passErr,
-            canSubmit = can,
-            isSubmitting = false,
-            errorMsg = null,
-            onEmailChange = { email = it },
-            onPassChange = { pass = it },
-            onSubmit = { },
-            onGoRegister = { }
-        )
     }
 }

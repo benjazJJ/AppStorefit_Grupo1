@@ -44,3 +44,36 @@ fun validateTelefono(telefono: String): String?{
     return null
 }
 
+
+fun validateRut(input: String): String? {
+    val raw = input.lowercase().replace(".", "").replace("-", "").trim()
+    if (raw.length < 2) return "RUT incompleto"
+
+    val cuerpo = raw.dropLast(1)
+    val dvIngresado = raw.last()
+
+    if (!cuerpo.all { it.isDigit() }) return "Formato inválido"
+    val dvCalculado = calcularDv(cuerpo.toLong())
+
+    return if (dvCalculado == dvIngresado) null else "RUT inválido"
+}
+
+private fun calcularDv(num: Long): Char {
+    var suma = 0
+    var multiplicador = 2
+    var n = num
+    while (n > 0) {
+        val dig = (n % 10).toInt()
+        suma += dig * multiplicador
+        multiplicador = if (multiplicador == 7) 2 else multiplicador + 1
+        n /= 10
+    }
+    val resto = 11 - (suma % 11)
+    return when (resto) {
+        11 -> '0'
+        10 -> 'k'
+        else -> ('0'.code + resto).toChar()
+    }
+}
+
+

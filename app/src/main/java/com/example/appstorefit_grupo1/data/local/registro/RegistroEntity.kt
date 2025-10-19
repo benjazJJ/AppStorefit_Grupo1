@@ -36,6 +36,6 @@ data class RegistroEntity(
     @ColumnInfo(name = "rut")
     val rut: String,                  // FK a usuarios.rut
 
-    @ColumnInfo(name = "reset_token")
-    val resetToken: String? = null
+    @ColumnInfo(name = "direccion")
+    val adress: String = ""
 )

@@ -1,169 +1,153 @@
+// ui/screen/PerfilScreen.kt
 package com.example.appstorefit_grupo1.ui.screen
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
-import com.example.appstorefit_grupo1.navigation.Route
-import com.example.appstorefit_grupo1.ui.theme.SF_Blue
-import com.example.appstorefit_grupo1.ui.theme.SF_Purple
-import com.example.appstorefit_grupo1.ui.theme.SF_Teal
-
-// ---- Modelo simple (mock por ahora) ----
-data class ProfileData(
-    val nombreCompleto: String = "Benjamín Palma",
-    val correo: String = "benja@storefit.cl",
-    val rut: String = "12.345.678-9",
-    val telefono: String = "+56 9 1234 5678",
-    val direccion: String = "Av. Siempre Viva 123, Santiago",
-    val fechaRegistro: String = "01/10/2025"
-)
+import androidx.navigation.NavController
+import com.example.appstorefit_grupo1.session.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilScreen(
-    navController: NavHostController,
-    datos: ProfileData = ProfileData()
-) {
-    val items = listOf(
-        PerfilItemUi("Nombre completo", datos.nombreCompleto, Icons.Filled.Person),
-        PerfilItemUi("Correo", datos.correo, Icons.Filled.Email),
-        PerfilItemUi("RUT", datos.rut, Icons.Filled.AssignmentInd),
-        PerfilItemUi("Teléfono", datos.telefono, Icons.Filled.Phone),
-        PerfilItemUi("Dirección", datos.direccion, Icons.Filled.LocationOn),
-        PerfilItemUi("Fecha de registro", datos.fechaRegistro, Icons.Filled.CalendarMonth)
-    )
+fun PerfilScreen(navController: NavController) {
+    val cs = MaterialTheme.colorScheme
 
     Scaffold(
-        containerColor = Color.White,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("MI PERFIL", fontWeight = FontWeight.SemiBold, color = Color.Black) },
-
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black,
-                    navigationIconContentColor = Color.Black,
-                    actionIconContentColor = Color.Black
-                )
-            )
+            TopAppBar(title = { Text("MI PERFIL", fontWeight = FontWeight.Bold) })
         }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(bottom = 24.dp)
-        ) {
-            // Bloques estándar
-            itemsIndexed(items) { index, item ->
-                PerfilDatoBox(
-                    etiquetaArriba = item.label,
-                    valor = item.value,
-                    leadingIcon = item.icon,
-                    trailing = null,
-                    borderBrush = gradientForIndex(index)
-                )
-            }
+    ) { inner ->
+        // Si por alguna razón no hay sesión, simplemente no dibujamos nada (sin mensajes).
+        val user = SessionManager.user ?: return@Scaffold
+        val roleId = SessionManager.roleId
 
-            // ---- Bloque de CONTRASEÑA (cuadro blanco, letras negras, borde degradado + botón lápiz) ----
-            item {
-                PerfilDatoBox(
-                    etiquetaArriba = "Contraseña",
-                    valor = "********",
-                    leadingIcon = Icons.Filled.Lock,
-                    trailing = {
-                        IconButton(onClick = { navController.navigate(Route.EditarContrasena.path) }) {
-                            Icon(imageVector = Icons.Filled.Edit, contentDescription = "Editar contraseña", tint = Color.Black)
+        Column(
+            modifier = Modifier
+                .padding(inner)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+
+            // Cabecera minimal (nombre + rol)
+            ElevatedCard(
+                colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row {
+                        Icon(Icons.Filled.Person, contentDescription = null, tint = cs.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            user.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cs.onSurface,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    RoleBox(
+                        roleName = when (roleId) {
+                            2L -> "ADMINISTRADOR"
+                            3L -> "SOPORTE"
+                            1L, null -> "CLIENTE"
+                            else -> "ESTUDIANTE"
                         }
-                    },
-                    borderBrush = gradientForIndex( items.size ) // siguiente degradado de la secuencia
-                )
-            }
-        }
-    }
-}
-
-/** Cuadro blanco con borde degradado y borde CUADRADO. Etiqueta ARRIBA. Texto/íconos en NEGRO. */
-@Composable
-private fun PerfilDatoBox(
-    etiquetaArriba: String,
-    valor: String,
-    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    trailing: (@Composable () -> Unit)?,
-    borderBrush: Brush
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Etiqueta arriba
-        Text(
-            text = etiquetaArriba,
-            color = Color.Black,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
-        )
-        // Contenedor con borde degradado (cuadrado)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(width = 2.dp, brush = borderBrush, shape = RectangleShape)
-                .background(color = Color.White, shape = RectangleShape)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row {
-                Icon(imageVector = leadingIcon, contentDescription = etiquetaArriba, tint = Color.Black)
-                Column(modifier = Modifier.padding(start = 12.dp)) {
-                    Text(
-                        text = valor,
-                        color = Color.Black,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }
             }
-            if (trailing != null) trailing()
+
+            OutlinedTextField(
+                value = user.email,
+                onValueChange = {},
+                leadingIcon = { Icon(Icons.Filled.AlternateEmail, null) },
+                label = { Text("Correo") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = user.rut,
+                onValueChange = {},
+                leadingIcon = { Icon(Icons.Filled.Badge, null) },
+                label = { Text("RUT") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = user.phone,
+                onValueChange = {},
+                leadingIcon = { Icon(Icons.Filled.Phone, null) },
+                label = { Text("Teléfono") },
+                readOnly = true,
+                visualTransformation = VisualTransformation.None,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = user.address,
+                onValueChange = {},
+                leadingIcon = { Icon(Icons.Filled.Home, null) },
+                label = { Text("Dirección") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
 
-private data class PerfilItemUi(
-    val label: String,
-    val value: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
-)
-
-/** Degradado que cicla la paleta */
-private fun gradientForIndex(index: Int): Brush =
-    when (index % 3) {
-        0 -> Brush.horizontalGradient(listOf(SF_Teal, SF_Blue))
-        1 -> Brush.horizontalGradient(listOf(SF_Blue, SF_Purple))
-        else -> Brush.horizontalGradient(listOf(SF_Purple, SF_Teal))
-    }
-
-@Preview(showBackground = true)
+/** Caja minimalista para el rol (borde sutil, tipografía clara, respeta tu paleta). */
 @Composable
-private fun PreviewPerfilScreen() {
-    PerfilScreen(rememberNavController(), ProfileData())
+private fun RoleBox(roleName: String) {
+    val cs = MaterialTheme.colorScheme
+    OutlinedCard(
+        colors = CardDefaults.outlinedCardColors(containerColor = cs.surface),
+        border = CardDefaults.outlinedCardBorder(),
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.medium)
+            .wrapContentWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Surface(
+                color = cs.primary,
+                contentColor = cs.onPrimary,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(MaterialTheme.shapes.small)
+            ) {}
+            Spacer(Modifier.width(8.dp))
+            Text(
+                roleName.uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = cs.onSurface,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
 }

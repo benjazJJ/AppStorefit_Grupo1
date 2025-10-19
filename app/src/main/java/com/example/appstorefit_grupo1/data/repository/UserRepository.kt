@@ -8,10 +8,12 @@ class UserRepository(
     private val userDao: UserDao,
     private val registroDao: RegistroDao
 ) {
-    // login por 'usuario' (email) + contraseña en tabla 'registro'
     suspend fun login(email: String, pass: String): Result<UserEntity> {
-        val reg = registroDao.getByUsuario(email)
-        return if (reg != null && reg.contrasenia == pass) {
+        val emailNorm = email.trim()          // <- normalizo entrada
+        val passNorm  = pass.trim()
+
+        val reg = registroDao.getByUsuario(emailNorm)
+        return if (reg != null && reg.contrasenia == passNorm) {
             val user = userDao.getByRut(reg.rut)
             if (user != null) Result.success(user)
             else Result.failure(IllegalStateException("Perfil no encontrado"))
@@ -20,33 +22,27 @@ class UserRepository(
         }
     }
 
-    // registro: crea usuario (usuarios) + credencial (registro)
     suspend fun register(
         rut: String,
         name: String,
         email: String,
         phone: String,
         pass: String,
-        rolId: Long = 1L // por defecto Cliente
+        rolId: Long = 1L
     ): Result<Long> {
-        // ¿ya existe un registro para este 'usuario' (email)?
-        val existsReg = registroDao.getByUsuario(email) != null
-        if (existsReg) {
+        val emailNorm = email.trim().lowercase()  // guardamos consistente
+        if (registroDao.getByUsuario(emailNorm) != null) {
             return Result.failure(IllegalArgumentException("Correo en uso"))
         }
-
-        // ¿ya existe perfil por rut?
-        val existsUser = userDao.getByRut(rut) != null
-        if (existsUser) {
+        if (userDao.getByRut(rut) != null) {
             return Result.failure(IllegalArgumentException("RUT ya registrado"))
         }
 
-        // Crear perfil en 'usuarios'
         userDao.insertar(
             UserEntity(
                 rut = rut,
                 name = name,
-                email = email,
+                email = emailNorm,
                 phone = phone,
                 lastName = "",
                 address = "",
@@ -54,16 +50,17 @@ class UserRepository(
             )
         )
 
-        // Crear credenciales en 'registro'
         val regId = registroDao.insertar(
             RegistroEntity(
                 rolId = rolId,
-                usuario = email,   // usamos el email como 'usuario'
-                contrasenia = pass,
+                usuario = emailNorm,
+                contrasenia = pass.trim(),
                 rut = rut
             )
         )
-
         return Result.success(regId)
     }
+
+    suspend fun getRegistroByUsuario(email: String): RegistroEntity? =
+        registroDao.getByUsuario(email.trim())
 }

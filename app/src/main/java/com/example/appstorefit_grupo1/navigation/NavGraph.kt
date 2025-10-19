@@ -26,19 +26,17 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.composable
 import com.example.appstorefit_grupo1.ui.screen.*
 
-// ---- Destinos de nivel superior que aparecen en la barra/rail ----
 private data class TopDest(
     val route: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
-// Ajusta esta lista según las pantallas principales que tengas listas.
-// (Por ahora: Home y Productos. Agregamos Perfil. Si Carrito está listo, lo agregas acá también.)
+
 private val TOP_DESTINATIONS = listOf(
     TopDest(Route.Home.path, "Inicio", Icons.Filled.Home),
     TopDest(Route.Productos.path, "Productos", Icons.Filled.ShoppingCart),
-    TopDest(Route.Perfil.path, "Perfil", Icons.Filled.Person) // <-- AGREGADO
+    TopDest(Route.Perfil.path, "Perfil", Icons.Filled.Person)
 )
 
 @Composable
@@ -121,7 +119,7 @@ private fun GraphHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Home.path
+        startDestination = Route.Login.path
     ) {
         composable(Route.Home.path) {
             HomeScreen(

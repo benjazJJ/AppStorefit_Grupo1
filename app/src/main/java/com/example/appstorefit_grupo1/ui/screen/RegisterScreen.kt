@@ -1,7 +1,13 @@
 package com.example.appstorefit_grupo1.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -12,25 +18,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.*
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
-import com.example.appstorefit_grupo1.domain.validation.*
-import com.example.appstorefit_grupo1.ui.theme.AppStoreFit_Grupo1Theme
+import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
 
-/* =========================
- * 1) Wrapper con ViewModel
- * ========================= */
+/* ---------- VM Wrapper ---------- */
 @Composable
 fun RegisterScreenVm(
-    vm: AuthViewModel,
     widthClass: WindowWidthSizeClass,
     onRegisteredNavigateLogin: () -> Unit,
     onGoLogin: () -> Unit
 ) {
-    //val vm: AuthViewModel = viewModel()
+    val context = LocalContext.current
+    val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
     val state by vm.register.collectAsStateWithLifecycle()
 
     if (state.success) {
@@ -38,24 +43,30 @@ fun RegisterScreenVm(
         onRegisteredNavigateLogin()
     }
 
-    RegisterForm(
+    RegisterScreen(
         widthClass = widthClass,
+        rut = state.rut,
         name = state.name,
         email = state.email,
         phone = state.phone,
+        address = state.address,
         pass = state.pass,
         confirm = state.confirm,
+        rutError = state.rutError,
         nameError = state.nameError,
         emailError = state.emailError,
         phoneError = state.phoneError,
+        addressError = state.addressError,
         passError = state.passError,
         confirmError = state.confirmError,
         canSubmit = state.canSubmit,
         isSubmitting = state.isSubmitting,
         errorMsg = state.errorMsg,
+        onRutChange = vm::onRutChange,
         onNameChange = vm::onNameChange,
         onEmailChange = vm::onRegisterEmailChange,
         onPhoneChange = vm::onPhoneChange,
+        onAddressChange = vm::onAddressChange,
         onPassChange = vm::onRegisterPassChange,
         onConfirmChange = vm::onConfirmChange,
         onSubmit = vm::submitRegister,
@@ -63,29 +74,33 @@ fun RegisterScreenVm(
     )
 }
 
-/* =========================
- * 2) UI responsive (sin VM)
- * ========================= */
+/* ---------- Mismo look & feel que Login ---------- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RegisterForm(
+private fun RegisterScreen(
     widthClass: WindowWidthSizeClass,
+    rut: String,
     name: String,
     email: String,
     phone: String,
+    address: String,
     pass: String,
     confirm: String,
+    rutError: String?,
     nameError: String?,
     emailError: String?,
     phoneError: String?,
+    addressError: String?,
     passError: String?,
     confirmError: String?,
     canSubmit: Boolean,
     isSubmitting: Boolean,
     errorMsg: String?,
+    onRutChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
+    onAddressChange: (String) -> Unit,
     onPassChange: (String) -> Unit,
     onConfirmChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -101,37 +116,53 @@ private fun RegisterForm(
     var showPass by remember { mutableStateOf(false) }
     var showConfirm by remember { mutableStateOf(false) }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Registro") }) }) { inner ->
-        Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(cs.surfaceVariant)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        ElevatedCard(
+            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
             modifier = Modifier
-                .padding(inner)
-                .fillMaxSize()
-                .background(cs.surfaceVariant)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .widthIn(max = maxW)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = maxW)
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Nombre
+                Text(
+                    text = "Registro",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = cs.onSurface
+                )
+
+                /* RUT */
+                OutlinedTextField(
+                    value = rut,
+                    onValueChange = onRutChange,
+                    label = { Text("RUT") },
+                    singleLine = true,
+                    isError = rutError != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AnimatedError(rutError)
+
+                /* Nombre */
                 OutlinedTextField(
                     value = name,
                     onValueChange = onNameChange,
                     label = { Text("Nombre") },
                     singleLine = true,
                     isError = nameError != null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (nameError != null) {
-                    Text(nameError, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                }
+                AnimatedError(nameError)
 
-                Spacer(Modifier.height(8.dp))
-
-                // Email
+                /* Email */
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -141,13 +172,9 @@ private fun RegisterForm(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (emailError != null) {
-                    Text(emailError, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                }
+                AnimatedError(emailError)
 
-                Spacer(Modifier.height(8.dp))
-
-                // Teléfono
+                /* Teléfono */
                 OutlinedTextField(
                     value = phone,
                     onValueChange = onPhoneChange,
@@ -157,13 +184,21 @@ private fun RegisterForm(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (phoneError != null) {
-                    Text(phoneError, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                }
+                AnimatedError(phoneError)
 
-                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = onAddressChange,
+                    label = { Text("Dirección") },
+                    singleLine = false,
+                    minLines = 1,
+                    isError = addressError != null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AnimatedError(addressError)
 
-                // Contraseña
+                /* Contraseña */
                 OutlinedTextField(
                     value = pass,
                     onValueChange = onPassChange,
@@ -175,19 +210,15 @@ private fun RegisterForm(
                         IconButton(onClick = { showPass = !showPass }) {
                             Icon(
                                 imageVector = if (showPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = if (showPass) "Ocultar contraseña" else "Mostrar contraseña"
+                                contentDescription = null
                             )
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (passError != null) {
-                    Text(passError, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                }
+                AnimatedError(passError)
 
-                Spacer(Modifier.height(8.dp))
-
-                // Confirmación
+                /* Confirmación */
                 OutlinedTextField(
                     value = confirm,
                     onValueChange = onConfirmChange,
@@ -199,119 +230,104 @@ private fun RegisterForm(
                         IconButton(onClick = { showConfirm = !showConfirm }) {
                             Icon(
                                 imageVector = if (showConfirm) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = if (showConfirm) "Ocultar confirmación" else "Mostrar confirmación"
+                                contentDescription = null
                             )
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (confirmError != null) {
-                    Text(confirmError, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                }
+                AnimatedError(confirmError)
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(6.dp))
 
-                // Botón Registrar
-                Button(
-                    onClick = onSubmit,
+                GradientButton(
+                    text = if (isSubmitting) "Creando cuenta…" else "Registrar",
                     enabled = canSubmit && !isSubmitting,
+                    loading = isSubmitting,
+                    onClick = onSubmit,
                     modifier = Modifier.fillMaxWidth()
+                )
+
+                AnimatedVisibility(
+                    visible = errorMsg != null,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
-                    if (isSubmitting) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Creando cuenta...")
-                    } else {
-                        Text("Registrar")
+                    if (errorMsg != null) {
+                        Text(
+                            errorMsg,
+                            color = cs.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
 
-                if (errorMsg != null) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(errorMsg, color = cs.error, style = MaterialTheme.typography.bodySmall)
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                // Ir a Login
-                OutlinedButton(onClick = onGoLogin, modifier = Modifier.fillMaxWidth()) {
-                    Text("Ir a Login")
-                }
+                OutlinedButton(
+                    onClick = onGoLogin,
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Ir a Login") }
             }
         }
     }
 }
 
-/* ================
- * 3) Previews
- * ================ */
-@Preview(showBackground = true, name = "Registro – Compacta", widthDp = 360, heightDp = 800, showSystemUi = true)
+/* --- Helpers visuales para mantener el mismo diseño que Login --- */
 @Composable
-private fun PreviewRegister_Compact() {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
-
-    val nameErr    = validateNombre(name)
-    val emailErr   = validateEmail(email)
-    val phoneErr   = validateTelefono(phone)
-    val passErr    = validateContraseña(pass)
-    val confirmErr = validateConfir(pass, confirm)
-
-    val filled   = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && pass.isNotBlank() && confirm.isNotBlank()
-    val noErrors = listOf(nameErr, emailErr, phoneErr, passErr, confirmErr).all { it == null }
-    val can      = filled && noErrors
-
-    AppStoreFit_Grupo1Theme {
-        RegisterForm(
-            widthClass = WindowWidthSizeClass.Compact,
-            name = name, email = email, phone = phone, pass = pass, confirm = confirm,
-            nameError = nameErr, emailError = emailErr, phoneError = phoneErr, passError = passErr, confirmError = confirmErr,
-            canSubmit = can, isSubmitting = false, errorMsg = null,
-            onNameChange = { name = it.filter { ch -> ch.isLetter() || ch.isWhitespace() } },
-            onEmailChange = { email = it },
-            onPhoneChange = { phone = it.filter { ch -> ch.isDigit() } },
-            onPassChange = { pass = it },
-            onConfirmChange = { confirm = it },
-            onSubmit = { }, onGoLogin = { }
-        )
+private fun AnimatedError(msg: String?) {
+    val cs = MaterialTheme.colorScheme
+    AnimatedVisibility(
+        visible = msg != null,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        if (msg != null) {
+            Text(msg, color = cs.error, style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 
-@Preview(showBackground = true, name = "Registro – Expandida", widthDp = 1000, heightDp = 800, showSystemUi = true)
 @Composable
-private fun PreviewRegister_Expanded() {
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
-
-    val nameErr    = validateNombre(name)
-    val emailErr   = validateEmail(email)
-    val phoneErr   = validateTelefono(phone)
-    val passErr    = validateContraseña(pass)
-    val confirmErr = validateConfir(pass, confirm)
-
-    val filled   = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && pass.isNotBlank() && confirm.isNotBlank()
-    val noErrors = listOf(nameErr, emailErr, phoneErr, passErr, confirmErr).all { it == null }
-    val can      = filled && noErrors
-
-    AppStoreFit_Grupo1Theme {
-        RegisterForm(
-            widthClass = WindowWidthSizeClass.Expanded,
-            name = name, email = email, phone = phone, pass = pass, confirm = confirm,
-            nameError = nameErr, emailError = emailErr, phoneError = phoneErr, passError = passErr, confirmError = confirmErr,
-            canSubmit = can, isSubmitting = false, errorMsg = null,
-            onNameChange = { name = it.filter { ch -> ch.isLetter() || ch.isWhitespace() } },
-            onEmailChange = { email = it },
-            onPhoneChange = { phone = it.filter { ch -> ch.isDigit() } },
-            onPassChange = { pass = it },
-            onConfirmChange = { confirm = it },
-            onSubmit = { }, onGoLogin = { }
-        )
+private fun GradientButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false
+) {
+    val cs = MaterialTheme.colorScheme
+    val gradient = Brush.horizontalGradient(
+        colors = listOf(cs.tertiary, cs.primary, cs.secondary)
+    )
+    Surface(
+        enabled = enabled,
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = Color.Transparent,
+        contentColor = cs.onPrimary,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .background(gradient, RoundedCornerShape(10.dp))
+                .padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (loading) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(end = 8.dp),
+                        color = cs.onPrimary
+                    )
+                    Text(text)
+                }
+            } else {
+                Text(text)
+            }
+        }
     }
 }
-
