@@ -74,8 +74,7 @@ abstract class AppDatabase : RoomDatabase() {
                                                 phone = "12345678",
                                                 lastName = "",
                                                 address = "",
-                                                birthDate = "",
-                                                registerDate = ""
+                                                birthDate = ""
                                             )
                                         )
                                         regDao.insertar(
