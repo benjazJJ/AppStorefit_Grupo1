@@ -45,35 +45,38 @@ fun validateTelefono(telefono: String): String?{
 }
 
 
-fun validateRut(input: String): String? {
-    val raw = input.lowercase().replace(".", "").replace("-", "").trim()
-    if (raw.length < 2) return "RUT incompleto"
+fun validateRut(rut: String): String? {
+    val trimmed = rut.trim()
 
-    val cuerpo = raw.dropLast(1)
-    val dvIngresado = raw.last()
+    val regex = Regex("""^\d{1,2}\.\d{3}\.\d{3}-[\dkK]$""")
+    if (!regex.matches(trimmed)) {
+        return "Formato RUT inválido. Usa 12.345.678-5"
+    }
 
-    if (!cuerpo.all { it.isDigit() }) return "Formato inválido"
-    val dvCalculado = calcularDv(cuerpo.toLong())
+    val parts = trimmed.replace(".", "").split("-")
+    val cuerpo = parts[0]                 // solo dígitos
+    val dvIngresado = parts[1].uppercase() // "0".."9" o "K"
 
-    return if (dvCalculado == dvIngresado) null else "RUT inválido"
+    // Valida DV (módulo 11)
+    return if (calculardv(cuerpo, dvIngresado)) null
+    else "RUT no válido (dígito verificador incorrecto)"
 }
 
-private fun calcularDv(num: Long): Char {
+private fun calculardv(numero: String, dvEsperado: String): Boolean {
     var suma = 0
     var multiplicador = 2
-    var n = num
-    while (n > 0) {
-        val dig = (n % 10).toInt()
-        suma += dig * multiplicador
-        multiplicador = if (multiplicador == 7) 2 else multiplicador + 1
-        n /= 10
+    for (c in numero.reversed()) {
+        suma += (c - '0') * multiplicador
+        multiplicador++
+        if (multiplicador > 7) multiplicador = 2
     }
     val resto = 11 - (suma % 11)
-    return when (resto) {
-        11 -> '0'
-        10 -> 'k'
-        else -> ('0'.code + resto).toChar()
+    val dvCalculado = when (resto) {
+        11 -> "0"
+        10 -> "K"
+        else -> resto.toString()
     }
+    return dvCalculado == dvEsperado
 }
 
 

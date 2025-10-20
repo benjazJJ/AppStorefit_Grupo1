@@ -95,7 +95,7 @@ fun AppNavGraph(
                         currentRoute?.startsWith(Route.DetalleProducto.path) == true) {
                         NavigationBar {
                             TOP_DESTINATIONS.forEach { dest ->
-                                // ✅ Mantener "Productos" seleccionado también en Detalle
+                                // Mantener "Productos" seleccionado también en Detalle
                                 val selected =
                                     if (dest.route == Route.Productos.path)
                                         (currentRoute?.startsWith(Route.Productos.path) == true) ||
