@@ -16,7 +16,4 @@ data class CategoriaEntity(
 
     @ColumnInfo(name = "nombre")
     val nombre: String,
-
-    @ColumnInfo(name = "descripcion")
-    val descripcion: String? = null
 )

@@ -1,0 +1,55 @@
+package com.example.appstorefit_grupo1.data.local.Productos
+
+import androidx.room.*
+
+@Dao
+interface ProductosDao {
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(product: ProductosEntity): Long
+
+    @Update
+    suspend fun update(product: ProductosEntity): Int
+
+    @Delete
+    suspend fun delete(product: ProductosEntity): Int
+
+    @Query("""
+        SELECT * FROM producto
+        WHERE id_categoria = :idCategoria AND id_producto = :idProducto
+        LIMIT 1
+    """)
+    suspend fun getByIds(idCategoria: Long, idProducto: Long): ProductosEntity?
+
+    @Query("SELECT * FROM producto ORDER BY id_categoria, id_producto")
+    suspend fun getAll(): List<ProductosEntity>
+
+    @Query("SELECT * FROM producto WHERE id_categoria = :idCategoria ORDER BY id_producto")
+    suspend fun getByCategoria(idCategoria: Long): List<ProductosEntity>
+
+    @Query("SELECT COUNT(*) FROM producto")
+    suspend fun count(): Int
+
+    @Query("SELECT MAX(id_producto) FROM producto WHERE id_categoria = :idCategoria")
+    suspend fun getMaxIdForCategory(idCategoria: Long): Long?
+
+    @Query("""
+        UPDATE producto
+        SET stock = :newStock
+        WHERE id_categoria = :idCategoria AND id_producto = :idProducto
+    """)
+    suspend fun updateStock(idCategoria: Long, idProducto: Long, newStock: Int): Int
+
+    @Query("""
+        UPDATE producto
+        SET stock = stock - :cantidad
+        WHERE id_categoria = :idCategoria
+          AND id_producto  = :idProducto
+          AND stock >= :cantidad
+    """)
+    suspend fun descontarStock(
+        idCategoria: Long,
+        idProducto: Long,
+        cantidad: Int
+    ): Int
+}

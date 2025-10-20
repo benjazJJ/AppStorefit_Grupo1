@@ -20,7 +20,6 @@ class CategoriaRepository(private val dao: CategoriaDao) {
         val id = dao.insert(
             CategoriaEntity(
                 nombre = nombre.trim(),
-                descripcion = descripcion?.trim()
             )
         )
 

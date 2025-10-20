@@ -1,4 +1,3 @@
-// data/local/database/AppDatabase.kt
 package com.example.appstorefit_grupo1.data.local.database
 
 import android.content.Context
@@ -8,6 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.appstorefit_grupo1.data.local.Categoria.CategoriaDao
 import com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity
+import com.example.appstorefit_grupo1.data.local.Productos.ProductosDao
+import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.registro.RegistroDao
 import com.example.appstorefit_grupo1.data.local.registro.RegistroEntity
 import com.example.appstorefit_grupo1.data.local.rol.RolDao
@@ -19,8 +20,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [UserEntity::class, RegistroEntity::class, RolEntity::class, CategoriaEntity::class],
-    version = 7,
+    entities = [
+        UserEntity::class,
+        RegistroEntity::class,
+        RolEntity::class,
+        CategoriaEntity::class,
+        ProductosEntity::class
+    ],
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,6 +35,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun registroDao(): RegistroDao
     abstract fun rolDao(): RolDao
     abstract fun categoriaDao(): CategoriaDao
+    abstract fun productosDao(): ProductosDao
 
     private class SeedCallback(
         private val scope: CoroutineScope,
@@ -39,7 +47,6 @@ abstract class AppDatabase : RoomDatabase() {
         }
         override fun onOpen(db: SupportSQLiteDatabase) {
             super.onOpen(db)
-            // opcional si quieres “backfill” al abrir
             seed()
         }
         private fun seed() = scope.launch(Dispatchers.IO) {
@@ -49,14 +56,12 @@ abstract class AppDatabase : RoomDatabase() {
             val regDao = appDb.registroDao()
             val cDao = appDb.categoriaDao()
 
-            // Roles
             if (kotlin.runCatching { rDao.count() }.getOrDefault(0) == 0) {
                 rDao.insert(RolEntity(rolId = 1L, nombreRol = "CLIENTE"))
                 rDao.insert(RolEntity(rolId = 2L, nombreRol = "ADMIN"))
                 rDao.insert(RolEntity(rolId = 3L, nombreRol = "SOPORTE"))
             }
 
-            // Admin
             if (regDao.getByUsuario("a@a.cl") == null) {
                 if (uDao.getByRut("11.111.111-1") == null) {
                     uDao.insertar(
@@ -81,7 +86,6 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
 
-            // Cliente
             if (regDao.getByUsuario("b@b.cl") == null) {
                 if (uDao.getByRut("22.222.222-2") == null) {
                     uDao.insertar(
@@ -106,11 +110,55 @@ abstract class AppDatabase : RoomDatabase() {
                 )
             }
 
-            // Categorías
             if (kotlin.runCatching { cDao.count() }.getOrDefault(0) == 0) {
-                cDao.insert(CategoriaEntity(nombre = "Remeras", descripcion = "Remeras deportivas"))
-                cDao.insert(CategoriaEntity(nombre = "Zapatillas", descripcion = "Calzado deportivo"))
-                cDao.insert(CategoriaEntity(nombre = "Gorras", descripcion = "Gorras y accesorios"))
+                cDao.insert(CategoriaEntity(nombre = "Poleras"))
+                cDao.insert(CategoriaEntity(nombre = "Poleron"))
+                cDao.insert(CategoriaEntity(nombre = "Buzo"))
+                cDao.insert(CategoriaEntity(nombre = "Conjunto Femenino"))
+            }
+
+            val pDao = appDb.productosDao()
+            val hayProductos = kotlin.runCatching { pDao.count() }.getOrDefault(0) > 0
+            if (!hayProductos) {
+                val preciosPorCategoria = mapOf(
+                    1L to 9990,
+                    2L to 17990,
+                    3L to 14990,
+                    4L to 19990
+                )
+                val modeloPorCategoria = mapOf(
+                    1L to "XFITRX",
+                    2L to "WARMGLIDE",
+                    3L to "FLEXRUN",
+                    4L to "FITQUEEN"
+                )
+                val tallas = listOf("XS","S","M","L","XL")
+                val colores = listOf(
+                    "Blanco con detalles negros",
+                    "Negro con detalles blancos"
+                )
+                val stockInicial = 12
+
+                for ((idCat, precio) in preciosPorCategoria) {
+                    val modelo = modeloPorCategoria[idCat] ?: "GENERIC"
+                    for (t in tallas) {
+                        for (c in colores) {
+                            val nextId = (pDao.getMaxIdForCategory(idCat) ?: 0L) + 1L
+                            pDao.insert(
+                                ProductosEntity(
+                                    idCategoria = idCat,
+                                    idProducto  = nextId,
+                                    marca  = "StoreFit",
+                                    modelo = modelo,
+                                    color  = c,
+                                    talla  = t,
+                                    precio = precio,
+                                    stock  = stockInicial
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -121,10 +169,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                // Creamos el builder con callback que accede a la MISMA instancia ya creada
                 val callback = SeedCallback(
                     scope = CoroutineScope(Dispatchers.IO),
-                    provider = { INSTANCE }     // << evita llamar getInstance()
+                    provider = { INSTANCE }
                 )
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
