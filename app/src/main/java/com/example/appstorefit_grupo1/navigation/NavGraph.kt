@@ -26,12 +26,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.composable
 import com.example.appstorefit_grupo1.ui.screen.*
 
+// 🔽 IMPORTS NUEVOS PARA ARGUMENTOS
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+
 private data class TopDest(
     val route: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
-
 
 private val TOP_DESTINATIONS = listOf(
     TopDest(Route.Home.path, "Inicio", Icons.Filled.Home),
@@ -66,7 +69,14 @@ fun AppNavGraph(
             Row(Modifier.fillMaxSize()) {
                 NavigationRail {
                     TOP_DESTINATIONS.forEach { dest ->
-                        val selected = currentRoute?.startsWith(dest.route) == true
+                        // ✅ Mantener "Productos" seleccionado también en Detalle
+                        val selected =
+                            if (dest.route == Route.Productos.path)
+                                (currentRoute?.startsWith(Route.Productos.path) == true) ||
+                                        (currentRoute?.startsWith(Route.DetalleProducto.path) == true)
+                            else
+                                currentRoute?.startsWith(dest.route) == true
+
                         NavigationRailItem(
                             selected = selected,
                             onClick = { navigateTopLevel(dest.route) },
@@ -85,10 +95,18 @@ fun AppNavGraph(
             androidx.compose.material3.Scaffold(
                 bottomBar = {
                     // Oculta la barra en pantallas que no sean top-level (por ejemplo Login/Register)
-                    if (TOP_DESTINATIONS.any { currentRoute?.startsWith(it.route) == true }) {
+                    if (TOP_DESTINATIONS.any { currentRoute?.startsWith(it.route) == true } ||
+                        currentRoute?.startsWith(Route.DetalleProducto.path) == true) {
                         NavigationBar {
                             TOP_DESTINATIONS.forEach { dest ->
-                                val selected = currentRoute?.startsWith(dest.route) == true
+                                // ✅ Mantener "Productos" seleccionado también en Detalle
+                                val selected =
+                                    if (dest.route == Route.Productos.path)
+                                        (currentRoute?.startsWith(Route.Productos.path) == true) ||
+                                                (currentRoute?.startsWith(Route.DetalleProducto.path) == true)
+                                    else
+                                        currentRoute?.startsWith(dest.route) == true
+
                                 NavigationBarItem(
                                     selected = selected,
                                     onClick = { navigateTopLevel(dest.route) },
@@ -173,6 +191,23 @@ private fun GraphHost(
             EditarContrasenaScreen(navController = navController)
         }
 
+
+        // ✅ NUEVO: Detalle de producto con query params (path fijo)
+        composable(
+            route = "${Route.DetalleProducto.path}?idCategoria={idCategoria}&modelo={modelo}",
+            arguments = listOf(
+                navArgument("idCategoria") { type = NavType.LongType },
+                navArgument("modelo")      { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val idCategoria = backStackEntry.arguments!!.getLong("idCategoria")
+            val modelo      = backStackEntry.arguments!!.getString("modelo")!!
+            DetalleProductoScreen(
+                navController = navController,
+                idCategoria   = idCategoria,
+                modelo        = modelo
+            )
+        }
 
         // Si quieres habilitar Carrito YA, agrega su pantalla y (opcional) súmalo a TOP_DESTINATIONS:
         // composable(Route.Carrito.path)       { CarritoScreen(widthClass = widthClass, navController) }

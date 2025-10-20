@@ -21,30 +21,37 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.appstorefit_grupo1.R
+import com.example.appstorefit_grupo1.navigation.Route
 import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
 
-data class Producto(val id: String, val nombre: String, val precio: Int, val imagenRes: Int)
+// ➜ Incluye idCategoria y modelo para poder ir al detalle
+data class Producto(
+    val id: String,
+    val idCategoria: Long,
+    val modelo: String,
+    val nombre: String,
+    val precio: Int,
+    val imagenRes: Int
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductosScreen(
     widthClass: WindowWidthSizeClass,
     nav: NavController,
-    onAddToCart: (Producto) -> Unit = { /* TODO: agrega a carrito */ },
-    onOpenDetalle: (String) -> Unit = { id ->
-        // TODO: nav.navigate(Route.DetalleProducto.path + "/$id")
+    onAddToCart: (Producto) -> Unit = { },
+    onOpenDetalle: (Long, String) -> Unit = { idCategoria, modelo ->
+        nav.navigate(Route.DetalleProducto.create(idCategoria, modelo))
     }
 ) {
-    // 1) Columnas por size class
     val columns = when (widthClass) {
         WindowWidthSizeClass.Expanded -> 4
         WindowWidthSizeClass.Medium   -> 3
         else                          -> 2
     }
 
-    // 2) Formateador CLP
     val clp = remember {
         NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply {
             currency = Currency.getInstance("CLP")
@@ -52,14 +59,13 @@ fun ProductosScreen(
         }
     }
 
-    // 3) Datos demo (luego lo sacas de tu repo)
+    // ➜ Solo tus 4 categorías, con modelo por categoría (coincide con el seed)
     val productos = remember {
         listOf(
-            Producto("1", "Polera Deportiva",      12_990, R.drawable.polerastorefit),
-            Producto("2", "Buzo Deportivo",        12_990, R.drawable.buzostorefit),
-            Producto("3", "Polerón Deportivo",     12_990, R.drawable.poleronstorefit),
-            Producto("4", "Top Deportivo",         12_990, R.drawable.topmujerstorefit),
-            Producto("5", "Zapatillas Deportivas", 12_990, R.drawable.zapatillastorefit),
+            Producto("1", idCategoria = 1L, modelo = "XFITRX",   nombre = "Polera StoreFit (XFITRX)",    precio = 9_990,  imagenRes = R.drawable.polerastorefit),
+            Producto("2", idCategoria = 3L, modelo = "FLEXRUN",  nombre = "Buzo StoreFit (FLEXRUN)",     precio = 14_990, imagenRes = R.drawable.buzostorefit),
+            Producto("3", idCategoria = 2L, modelo = "WARMGLIDE",nombre = "Polerón StoreFit (WARMGLIDE)",precio = 17_990, imagenRes = R.drawable.poleronstorefit),
+            Producto("4", idCategoria = 4L, modelo = "FITQUEEN", nombre = "Conjunto Femenino (FITQUEEN)",precio = 19_990, imagenRes = R.drawable.topmujerstorefit),
         )
     }
 
@@ -86,7 +92,7 @@ fun ProductosScreen(
                             contentDescription = p.nombre,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f)          // 1:1 estable
+                                .aspectRatio(1f)
                                 .clip(RoundedCornerShape(12.dp)),
                             contentScale = ContentScale.Crop
                         )
@@ -115,7 +121,7 @@ fun ProductosScreen(
                         Spacer(Modifier.height(8.dp))
 
                         OutlinedButton(
-                            onClick = { onOpenDetalle(p.id) },
+                            onClick = { onOpenDetalle(p.idCategoria, p.modelo) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.primary

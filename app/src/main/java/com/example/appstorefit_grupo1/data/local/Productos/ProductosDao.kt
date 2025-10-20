@@ -52,4 +52,14 @@ interface ProductosDao {
         idProducto: Long,
         cantidad: Int
     ): Int
+    // ProductosDao.kt
+    @Query("""
+    SELECT * FROM producto
+    WHERE id_categoria = :idCategoria AND modelo = :modelo
+    ORDER BY talla, color
+    """)
+    suspend fun getByCategoriaYModelo(
+        idCategoria: Long,
+        modelo: String
+    ): List<ProductosEntity>
 }
