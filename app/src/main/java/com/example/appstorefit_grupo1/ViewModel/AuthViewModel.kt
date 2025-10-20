@@ -30,7 +30,6 @@ data class RegisterUiState(
     val address: String = "",
     val pass: String = "",
     val confirm: String = "",
-    val photoUri: String? = null, // <-- AÑADIDO
 
     val rutError: String? = null,
     val nameError: String? = null,
@@ -135,11 +134,6 @@ class AuthViewModel(
         recomputeRegisterCanSubmit()
     }
 
-
-    fun onPhotoUriChange(uri: String) {
-        _register.update { it.copy(photoUri = uri) }
-    }
-
     private fun recomputeRegisterCanSubmit() {
         val s = _register.value
         val noErrors = listOf(s.rutError, s.nameError, s.emailError, s.phoneError, s.addressError, s.passError, s.confirmError).all { it == null }
@@ -160,8 +154,7 @@ class AuthViewModel(
                 email = s.email,
                 phone = s.phone,
                 address = s.address,
-                pass = s.pass,
-                photoUri = s.photoUri
+                pass = s.pass
             )
             _register.update {
                 if (result.isSuccess) it.copy(isSubmitting = false, success = true, errorMsg = null)
