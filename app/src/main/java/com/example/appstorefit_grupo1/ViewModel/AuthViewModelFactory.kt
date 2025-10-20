@@ -6,14 +6,14 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 
-/**
- * Factory que arma el UserRepository desde Room usando el Context de la app.
- */
+//Factory que arma el UserRepository desde Room usando el Context de la app.
+
 class AuthViewModelFactory(private val appContext: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         val db = AppDatabase.getInstance(appContext)
         val repo = UserRepository(
+            db = db,
             userDao = db.userDao(),
             registroDao = db.registroDao()
         )

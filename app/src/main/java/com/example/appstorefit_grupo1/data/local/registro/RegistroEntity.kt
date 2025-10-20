@@ -18,7 +18,11 @@ import com.example.appstorefit_grupo1.data.local.user.UserEntity
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("rut"), Index("rol_id")]
+    indices = [
+        Index(value = ["usuario"], unique = true),
+        Index("rut"),
+        Index("rol_id")
+    ]
 )
 data class RegistroEntity(
     @PrimaryKey(autoGenerate = true)
@@ -29,7 +33,6 @@ data class RegistroEntity(
 
     @ColumnInfo(name = "usuario")
     val usuario: String,
-
     @ColumnInfo(name = "contrasenia")
     val contrasenia: String,
 
@@ -37,5 +40,5 @@ data class RegistroEntity(
     val rut: String,                  // FK a usuarios.rut
 
     @ColumnInfo(name = "direccion")
-    val adress: String = ""
+    val address: String = ""
 )

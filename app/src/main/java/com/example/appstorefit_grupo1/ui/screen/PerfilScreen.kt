@@ -1,4 +1,3 @@
-// ui/screen/PerfilScreen.kt
 package com.example.appstorefit_grupo1.ui.screen
 
 import androidx.compose.foundation.layout.*
@@ -46,10 +45,16 @@ fun PerfilScreen(navController: NavController) {
     val grad1 = Brush.horizontalGradient(listOf(SF_Teal, SF_Blue))
     val grad2 = Brush.horizontalGradient(listOf(SF_Blue, SF_Purple))
 
-    // nstancias para refrescar desde Room
+    // instancias para refrescar desde Room
     val ctx = LocalContext.current
-    val db = remember { AppDatabase.getInstance(ctx) }
-    val repo = remember { UserRepository(db.userDao(), db.registroDao()) }
+    val db  = remember { AppDatabase.getInstance(ctx) }
+    val repo = remember {
+        UserRepository(
+            db = db,                      // <- pasa la DB completa
+            userDao = db.userDao(),
+            registroDao = db.registroDao()
+        )
+    }
 
     // user en estado, partiendo por lo que tenga la sesión
     var user by remember { mutableStateOf(SessionManager.user) }

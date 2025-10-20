@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
         CategoriaEntity::class,
         ProductosEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,75 +41,59 @@ abstract class AppDatabase : RoomDatabase() {
         private val scope: CoroutineScope,
         private val provider: () -> AppDatabase?
     ) : Callback() {
+
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            seed()
+            scope.launch(Dispatchers.IO) { seed() }
         }
-        override fun onOpen(db: SupportSQLiteDatabase) {
-            super.onOpen(db)
-            seed()
-        }
-        private fun seed() = scope.launch(Dispatchers.IO) {
-            val appDb = provider() ?: return@launch
+
+        private suspend fun seed() {
+            val appDb = provider() ?: return
             val rDao = appDb.rolDao()
             val uDao = appDb.userDao()
             val regDao = appDb.registroDao()
             val cDao = appDb.categoriaDao()
+            val pDao = appDb.productosDao()
 
+            // --- Roles ---
             if (kotlin.runCatching { rDao.count() }.getOrDefault(0) == 0) {
                 rDao.insert(RolEntity(rolId = 1L, nombreRol = "CLIENTE"))
                 rDao.insert(RolEntity(rolId = 2L, nombreRol = "ADMIN"))
                 rDao.insert(RolEntity(rolId = 3L, nombreRol = "SOPORTE"))
             }
 
-            if (regDao.getByUsuario("a@a.cl") == null) {
-                if (uDao.getByRut("11.111.111-1") == null) {
-                    uDao.insertar(
-                        UserEntity(
-                            rut = "11.111.111-1",
-                            name = "Admin",
-                            email = "a@a.cl",
-                            phone = "12345678",
-                            lastName = "",
-                            address = "",
-                            birthDate = ""
+            // --- Usuarios + Registro (emails normalizados en lowercase) ---
+            suspend fun ensureUser(email: String, rut: String, nombre: String, pass: String, rolId: Long) {
+                val e = email.trim().lowercase()
+                if (regDao.getByUsuario(e) == null) {
+                    if (uDao.getByRut(rut) == null) {
+                        uDao.insertar(
+                            UserEntity(
+                                rut = rut,
+                                name = nombre,
+                                email = e,
+                                phone = "12345678",
+                                lastName = "",
+                                address = "",
+                                birthDate = ""
+                            )
+                        )
+                    }
+                    regDao.insertar(
+                        RegistroEntity(
+                            rolId = rolId,
+                            usuario = e,
+                            contrasenia = pass,
+                            rut = rut
                         )
                     )
                 }
-                regDao.insertar(
-                    RegistroEntity(
-                        rolId = 2L,
-                        usuario = "a@a.cl",
-                        contrasenia = "Admin123!",
-                        rut = "11.111.111-1"
-                    )
-                )
             }
 
-            if (regDao.getByUsuario("b@b.cl") == null) {
-                if (uDao.getByRut("22.222.222-2") == null) {
-                    uDao.insertar(
-                        UserEntity(
-                            rut = "22.222.222-2",
-                            name = "Jose",
-                            email = "b@b.cl",
-                            phone = "12345678",
-                            lastName = "Perez",
-                            address = "Av. Felicia 213",
-                            birthDate = ""
-                        )
-                    )
-                }
-                regDao.insertar(
-                    RegistroEntity(
-                        rolId = 1L,
-                        usuario = "b@b.cl",
-                        contrasenia = "Jose123!",
-                        rut = "22.222.222-2"
-                    )
-                )
-            }
+            ensureUser("a@a.cl", "11.111.111-1", "Admin", "Admin123!", 2L)
+            ensureUser("b@b.cl", "22.222.222-2", "Jose",  "Jose123!",  1L)
 
+            // --- Categorías ---
             if (kotlin.runCatching { cDao.count() }.getOrDefault(0) == 0) {
                 cDao.insert(CategoriaEntity(nombre = "Poleras"))
                 cDao.insert(CategoriaEntity(nombre = "Poleron"))
@@ -117,7 +101,7 @@ abstract class AppDatabase : RoomDatabase() {
                 cDao.insert(CategoriaEntity(nombre = "Conjunto Femenino"))
             }
 
-            val pDao = appDb.productosDao()
+            // --- Productos ---
             val hayProductos = kotlin.runCatching { pDao.count() }.getOrDefault(0) > 0
             if (!hayProductos) {
                 val preciosPorCategoria = mapOf(
@@ -165,7 +149,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
-        private const val DB_NAME = "ui_navegacion.db"
+        private const val DB_NAME = "storefit.db"
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -179,7 +163,6 @@ abstract class AppDatabase : RoomDatabase() {
                     DB_NAME
                 )
                     .addCallback(callback)
-                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

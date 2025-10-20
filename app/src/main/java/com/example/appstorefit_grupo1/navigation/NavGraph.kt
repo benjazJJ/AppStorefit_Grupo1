@@ -1,4 +1,3 @@
-// navigation/NavGraph.kt
 package com.example.appstorefit_grupo1.navigation
 
 import androidx.compose.foundation.layout.Box
@@ -7,7 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person            // <-- NUEVO
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -25,8 +24,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.composable
 import com.example.appstorefit_grupo1.ui.screen.*
-
-// 🔽 IMPORTS NUEVOS PARA ARGUMENTOS
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
@@ -62,14 +59,13 @@ fun AppNavGraph(
         }
     }
 
-    // ---------- Layout adaptativo de navegación ----------
     when (widthClass) {
         WindowWidthSizeClass.Expanded -> {
             // Tablets grandes / desktop: NavigationRail + contenido
             Row(Modifier.fillMaxSize()) {
                 NavigationRail {
                     TOP_DESTINATIONS.forEach { dest ->
-                        // ✅ Mantener "Productos" seleccionado también en Detalle
+                        // Mantener "Productos" seleccionado también en Detalle
                         val selected =
                             if (dest.route == Route.Productos.path)
                                 (currentRoute?.startsWith(Route.Productos.path) == true) ||
@@ -126,10 +122,8 @@ fun AppNavGraph(
     }
 }
 
-/**
- * NavHost real con todas las rutas. Separado para poder reutilizarlo
- * en ambos layouts (Rail o BottomBar).
- */
+//NavHost real con todas las rutas. Separado para poder reutilizarlo en ambos layouts (Rail o BottomBar).
+
 @Composable
 private fun GraphHost(
     navController: NavHostController,
@@ -192,7 +186,7 @@ private fun GraphHost(
         }
 
 
-        // ✅ NUEVO: Detalle de producto con query params (path fijo)
+        //Detalle de producto con query params (path fijo)
         composable(
             route = "${Route.DetalleProducto.path}?idCategoria={idCategoria}&modelo={modelo}",
             arguments = listOf(
@@ -208,9 +202,5 @@ private fun GraphHost(
                 modelo        = modelo
             )
         }
-
-        // Si quieres habilitar Carrito YA, agrega su pantalla y (opcional) súmalo a TOP_DESTINATIONS:
-        // composable(Route.Carrito.path)       { CarritoScreen(widthClass = widthClass, navController) }
-        // composable(Route.EditarPerfil.path)  { EditarPerfilScreen(widthClass = widthClass, navController) }
     }
 }

@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 import com.example.appstorefit_grupo1.domain.validation.*
-import com.example.appstorefit_grupo1.session.SessionManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,31 +67,42 @@ class AuthViewModel(
 
     private fun recomputeLoginCanSubmit() {
         val s = _login.value
-        _login.update { it.copy(canSubmit = s.emailError == null && s.email.isNotBlank() && s.pass.isNotBlank()) }
+        _login.update {
+            it.copy(
+                canSubmit = s.emailError == null &&
+                        s.email.isNotBlank() &&
+                        s.pass.isNotBlank()
+            )
+        }
     }
 
     fun submitLogin() {
         val s = _login.value
         if (!s.canSubmit || s.isSubmitting) return
+
         viewModelScope.launch {
             _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
-            delay(500)
+            // delay opcional solo para UX
+            delay(250)
+
             val result = repository.login(s.email, s.pass)
-            if (result.isSuccess) {
-                val user = result.getOrNull()
-                val reg = repository.getRegistroByUsuario(s.email)
-                SessionManager.user = user
-                SessionManager.roleId = reg?.rolId
-            }
             _login.update {
-                if (result.isSuccess) it.copy(isSubmitting = false, success = true, errorMsg = null)
-                else it.copy(isSubmitting = false, success = false,
-                    errorMsg = result.exceptionOrNull()?.message ?: "Error de autenticación")
+                if (result.isSuccess) {
+                    it.copy(isSubmitting = false, success = true, errorMsg = null)
+                } else {
+                    it.copy(
+                        isSubmitting = false,
+                        success = false,
+                        errorMsg = result.exceptionOrNull()?.message ?: "Error de autenticación"
+                    )
+                }
             }
         }
     }
 
-    fun clearLoginResult() { _login.update { it.copy(success = false, errorMsg = null) } }
+    fun clearLoginResult() {
+        _login.update { it.copy(success = false, errorMsg = null) }
+    }
 
     // ---------- REGISTRO ----------
     fun onRutChange(value: String) {
@@ -136,7 +146,10 @@ class AuthViewModel(
 
     private fun recomputeRegisterCanSubmit() {
         val s = _register.value
-        val noErrors = listOf(s.rutError, s.nameError, s.emailError, s.phoneError, s.addressError, s.passError, s.confirmError).all { it == null }
+        val noErrors = listOf(
+            s.rutError, s.nameError, s.emailError, s.phoneError,
+            s.addressError, s.passError, s.confirmError
+        ).all { it == null }
         val filled = s.rut.isNotBlank() && s.name.isNotBlank() && s.email.isNotBlank() &&
                 s.phone.isNotBlank() && s.address.isNotBlank() && s.pass.isNotBlank() && s.confirm.isNotBlank()
         _register.update { it.copy(canSubmit = noErrors && filled) }
@@ -145,9 +158,11 @@ class AuthViewModel(
     fun submitRegister() {
         val s = _register.value
         if (!s.canSubmit || s.isSubmitting) return
+
         viewModelScope.launch {
             _register.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
-            delay(700)
+            delay(350)
+
             val result = repository.register(
                 rut = s.rut,
                 name = s.name,
@@ -156,13 +171,22 @@ class AuthViewModel(
                 address = s.address,
                 pass = s.pass
             )
+
             _register.update {
-                if (result.isSuccess) it.copy(isSubmitting = false, success = true, errorMsg = null)
-                else it.copy(isSubmitting = false, success = false,
-                    errorMsg = result.exceptionOrNull()?.message ?: "Registro inválido")
+                if (result.isSuccess) {
+                    it.copy(isSubmitting = false, success = true, errorMsg = null)
+                } else {
+                    it.copy(
+                        isSubmitting = false,
+                        success = false,
+                        errorMsg = result.exceptionOrNull()?.message ?: "Registro inválido"
+                    )
+                }
             }
         }
     }
 
-    fun clearRegisterResult() { _register.update { it.copy(success = false, errorMsg = null) } }
+    fun clearRegisterResult() {
+        _register.update { it.copy(success = false, errorMsg = null) }
+    }
 }

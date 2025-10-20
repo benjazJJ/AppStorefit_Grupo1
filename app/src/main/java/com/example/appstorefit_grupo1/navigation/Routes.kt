@@ -13,7 +13,7 @@ sealed class Route(val path: String){
     data object Perfil           : Route("perfil")          // Ruta para perfil screen
     data object EditarContrasena : Route("editarContrasena")// Ruta para editar perfil screen
 
-    // ✅ Detalle con path fijo + query params (coincide con NavGraph)
+    //Detalle con path fijo + query params (coincide con NavGraph)
     data object DetalleProducto  : Route("detalleProducto") {
         fun create(idCategoria: Long, modelo: String): String =
             "detalleProducto?idCategoria=$idCategoria&modelo=${Uri.encode(modelo)}"

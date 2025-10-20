@@ -47,10 +47,9 @@ fun EditarContrasenaScreen(
     val fieldShape = RoundedCornerShape(12.dp)
     val buttonShape = RoundedCornerShape(24.dp)
 
-    // ---- wiring a Room + Repo (sin Hilt)
     val ctx = LocalContext.current
-    val db = remember { AppDatabase.getInstance(ctx) }
-    val repo = remember { UserRepository(db.userDao(), db.registroDao()) }
+    val db  = remember { AppDatabase.getInstance(ctx) }
+    val repo = remember { UserRepository(db = db, userDao = db.userDao(), registroDao = db.registroDao()) }
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
 
@@ -163,7 +162,7 @@ private fun CampoPasswordDegradado(
     visible: Boolean,
     onToggleVisible: () -> Unit,
     borderBrush: Brush,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp)   // <-- nuevo
+    shape: RoundedCornerShape = RoundedCornerShape(12.dp)
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(
