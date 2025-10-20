@@ -16,4 +16,7 @@ interface RegistroDao {
 
     @Query("SELECT COUNT(*) FROM registro")
     suspend fun count(): Int
+
+    @Query("UPDATE registro SET contrasenia = :newPass WHERE usuario = :usuario")
+    suspend fun updatePasswordByUsuario(usuario: String, newPass: String): Int
 }

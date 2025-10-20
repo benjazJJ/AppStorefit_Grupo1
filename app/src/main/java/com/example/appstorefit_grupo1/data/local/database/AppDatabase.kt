@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
         CategoriaEntity::class,
         ProductosEntity::class
     ],
-    version = 9,
+    version = 11,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

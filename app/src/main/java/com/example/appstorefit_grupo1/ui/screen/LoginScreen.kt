@@ -19,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -34,7 +33,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
-import com.example.appstorefit_grupo1.data.repository.UserRepository
 
 @Composable
 fun LoginScreenVm(
@@ -137,8 +135,8 @@ private fun LoginScreen(
         else                          -> 360.dp
     }
 
+    // Mostrar/ocultar contraseña
     var showPass by rememberSaveable { mutableStateOf(false) }
-    var passTouched by rememberSaveable { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -173,6 +171,7 @@ private fun LoginScreen(
                 )
                 Spacer(Modifier.height(20.dp))
 
+                // -------- Email ----------
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -207,15 +206,10 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                val showPassError = passTouched && (passError != null || pass.isBlank())
-                val passErrorMsg = passError ?: "Campo obligatorio"
-
+                // -------- Contraseña ----------
                 OutlinedTextField(
                     value = pass,
-                    onValueChange = {
-                        if (!passTouched) passTouched = true
-                        onPassChange(it)
-                    },
+                    onValueChange = onPassChange,
                     label = { Text("Contraseña") },
                     singleLine = true,
                     visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
@@ -227,10 +221,16 @@ private fun LoginScreen(
                             )
                         }
                     },
-                    isError = showPassError,
+                    isError = passError != null,
                     supportingText = {
-                        if (showPassError) {
-                            Text(passErrorMsg, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                        AnimatedVisibility(
+                            visible = passError != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            if (passError != null) {
+                                Text(passError, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     },
                     keyboardOptions = KeyboardOptions(
@@ -240,9 +240,7 @@ private fun LoginScreen(
                     keyboardActions = KeyboardActions(
                         onDone = { if (canSubmit && !isSubmitting) onSubmit() }
                     ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { if (!it.isFocused) passTouched = true }
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(20.dp))

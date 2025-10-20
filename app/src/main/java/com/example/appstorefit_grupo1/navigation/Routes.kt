@@ -9,6 +9,8 @@ sealed class Route(val path: String){
     data object Carrito: Route("carrito") //Ruta para carrito screen
     data object Configuracion: Route("configuracion") //Ruta para configuracion screen
     data object Perfil: Route("perfil") //Ruta para perfil screen
-    data object EditarContrasena : Route("editarContrasena") //Ruta para editar perfil screen
+    data object EditarContrasena : Route("editarContrasena") //Ruta para editar contraseña en perfil screen
+
+    object Camera : Route("camera") //Ruta para la camara
 
 }

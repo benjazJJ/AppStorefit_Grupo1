@@ -72,4 +72,17 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.8.2")
     ksp("androidx.room:room-compiler:2.6.1")
+
+    // CameraX (Jetpack)
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+
+    // PreviewView
+    // Compose activity (para launchers)
+    implementation("androidx.activity:activity-compose:1.9.2")
+
+    // Mostrar la foto (Coil)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }

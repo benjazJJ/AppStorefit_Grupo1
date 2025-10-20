@@ -1,34 +1,18 @@
 package com.example.appstorefit_grupo1.data.local.user
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(
-    tableName = "usuarios",
-    indices = [Index(value = ["correo_electronico"], unique = true)]
-)
+@Entity(tableName = "users")
 data class UserEntity(
-    @PrimaryKey
-    @ColumnInfo(name = "rut")
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0L,
     val rut: String,
-
-    @ColumnInfo(name = "nombre")
     val name: String,
-
-    @ColumnInfo(name = "apellidos")
-    val lastName: String = "",
-
-    @ColumnInfo(name = "correo_electronico")
+    val lastName: String,
     val email: String,
-
-    @ColumnInfo(name = "telefono")
-    val phone: String = "",
-
-    @ColumnInfo(name = "direccion")
-    val address: String = "",
-
-    @ColumnInfo(name = "fec_nac")
-    val birthDate: String = ""
+    val phone: String,
+    val address: String,
+    val birthDate: String,
+    val photoUri: String? = null
 )

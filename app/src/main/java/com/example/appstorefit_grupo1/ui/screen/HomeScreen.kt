@@ -27,11 +27,10 @@ fun HomeScreen(
 ) {
     when (widthClass) {
         WindowWidthSizeClass.Compact -> HomeCompact(onGoLogin, onGoRegister, onGoProductos)
-        else -> HomeExpanded(onGoLogin, onGoRegister, onGoProductos) // Medium + Expanded
+        else -> HomeExpanded(onGoLogin, onGoRegister, onGoProductos)
     }
 }
 
-/* ======= Compacta (tu diseño actual) ======= */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeCompact(
@@ -56,27 +55,8 @@ private fun HomeCompact(
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(Modifier.width(8.dp))
-                    AssistChip(onClick = {}, label = { Text("Navega desde aquí") })
                 }
-                Spacer(Modifier.height(16.dp))
-                ElevatedCard(Modifier.fillMaxWidth()) {
-                    Column(
-                        Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Demostración de navegación",
-                            style = MaterialTheme.typography.titleMedium,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Usa TopBar/BottomBar o estos botones.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
+
                 Spacer(Modifier.height(16.dp))
                 Image(
                     painter = painterResource(id = R.drawable.storefitlogo),
@@ -95,7 +75,6 @@ private fun HomeCompact(
     }
 }
 
-/* ======= Expandida (2 paneles) ======= */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeExpanded(
@@ -114,7 +93,6 @@ private fun HomeExpanded(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Panel izquierdo: texto + acciones
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -125,22 +103,13 @@ private fun HomeExpanded(
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                ElevatedCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Demostración de navegación", style = MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Aprovecha el espacio para mostrar más contenido.")
-                    }
-                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(onClick = onGoProductos) { Text("Ver productos") }
                     OutlinedButton(onClick = onGoLogin) { Text("Login") }
                     OutlinedButton(onClick = onGoRegister) { Text("Registro") }
                 }
-                AssistChip(onClick = {}, label = { Text("Navega desde aquí") })
             }
 
-            // Panel derecho: imagen/hero más grande
             Column(
                 modifier = Modifier.weight(1f),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -156,25 +125,4 @@ private fun HomeExpanded(
     }
 }
 
-/* ======= Previews (solo IDE) ======= */
-@Preview(name = "Home – Compacta", widthDp = 360, heightDp = 800, showSystemUi = true)
-@Composable
-private fun PreviewHomeCompact() {
-    HomeScreen(
-        widthClass = WindowWidthSizeClass.Compact,
-        onGoLogin = {},
-        onGoRegister = {},
-        onGoProductos = {}
-    )
-}
 
-@Preview(name = "Home – Expandida", widthDp = 1000, heightDp = 800, showSystemUi = true)
-@Composable
-private fun PreviewHomeExpanded() {
-    HomeScreen(
-        widthClass = WindowWidthSizeClass.Expanded,
-        onGoLogin = {},
-        onGoRegister = {},
-        onGoProductos = {}
-    )
-}
