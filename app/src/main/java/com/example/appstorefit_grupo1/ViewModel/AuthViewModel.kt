@@ -135,7 +135,7 @@ class AuthViewModel(
         recomputeRegisterCanSubmit()
     }
 
-    // <-- AÑADIDO
+
     fun onPhotoUriChange(uri: String) {
         _register.update { it.copy(photoUri = uri) }
     }

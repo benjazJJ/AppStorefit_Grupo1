@@ -1,20 +1,15 @@
 package com.example.appstorefit_grupo1.ui.screen
 
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -22,24 +17,19 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import coil.compose.AsyncImage
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
 
 /* ---------- VM Wrapper ---------- */
 @Composable
 fun RegisterScreenVm(
-    navController: NavController, // Cambiado para recibir NavController
     widthClass: WindowWidthSizeClass,
     onRegisteredNavigateLogin: () -> Unit,
     onGoLogin: () -> Unit
@@ -47,19 +37,6 @@ fun RegisterScreenVm(
     val context = LocalContext.current
     val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
     val state by vm.register.collectAsStateWithLifecycle()
-
-    // Listener para el resultado de la cámara
-    val photoUriResult = navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.getLiveData<String>("photo_uri")?.observeAsState()
-
-    LaunchedEffect(photoUriResult) {
-        photoUriResult?.value?.let {
-            vm.onPhotoUriChange(it)
-            // Limpiamos para no volver a recibirlo en una recomposición
-            navController.currentBackStackEntry?.savedStateHandle?.remove<String>("photo_uri")
-        }
-    }
 
     if (state.success) {
         vm.clearRegisterResult()
@@ -75,7 +52,6 @@ fun RegisterScreenVm(
         address = state.address,
         pass = state.pass,
         confirm = state.confirm,
-        photoUri = state.photoUri,
         rutError = state.rutError,
         nameError = state.nameError,
         emailError = state.emailError,
@@ -94,8 +70,7 @@ fun RegisterScreenVm(
         onPassChange = vm::onRegisterPassChange,
         onConfirmChange = vm::onConfirmChange,
         onSubmit = vm::submitRegister,
-        onGoLogin = onGoLogin,
-        onGoToCamera = { navController.navigate("camera") } // Navegamos a la cámara
+        onGoLogin = onGoLogin
     )
 }
 
@@ -111,7 +86,6 @@ private fun RegisterScreen(
     address: String,
     pass: String,
     confirm: String,
-    photoUri: String?,
     rutError: String?,
     nameError: String?,
     emailError: String?,
@@ -130,8 +104,7 @@ private fun RegisterScreen(
     onPassChange: (String) -> Unit,
     onConfirmChange: (String) -> Unit,
     onSubmit: () -> Unit,
-    onGoLogin: () -> Unit,
-    onGoToCamera: () -> Unit
+    onGoLogin: () -> Unit
 ) {
     val cs = MaterialTheme.colorScheme
     val maxW = when (widthClass) {
@@ -159,7 +132,6 @@ private fun RegisterScreen(
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
@@ -167,32 +139,6 @@ private fun RegisterScreen(
                     style = MaterialTheme.typography.headlineSmall,
                     color = cs.onSurface
                 )
-
-                // --- Vista previa de la foto ---
-                if (photoUri != null) {
-                    Box(contentAlignment = Alignment.Center) {
-                        AsyncImage(
-                            model = Uri.parse(photoUri),
-                            contentDescription = "Foto de perfil",
-                            modifier = Modifier
-                                .size(100.dp)
-                                .clip(CircleShape)
-                                .border(2.dp, cs.primary, CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                }
-
-                // --- Botón para añadir/editar foto ---
-                OutlinedButton(
-                    onClick = onGoToCamera,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    val icon = if (photoUri == null) Icons.Default.AddAPhoto else Icons.Default.Edit
-                    val text = if (photoUri == null) "Añadir Foto (Opcional)" else "Cambiar Foto"
-                    Icon(icon, contentDescription = text, modifier = Modifier.padding(end = 8.dp))
-                    Text(text)
-                }
 
                 /* RUT */
                 OutlinedTextField(

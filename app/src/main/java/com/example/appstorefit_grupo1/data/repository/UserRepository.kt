@@ -32,7 +32,6 @@ class UserRepository(
         phone: String,
         pass: String,
         address: String,
-        photoUri: String?,
         rolId: Long = 1L
     ): Result<Long> {
         val emailNorm = email.trim().lowercase()   // guardamos consistente
@@ -51,8 +50,7 @@ class UserRepository(
                 phone = phone,
                 lastName = "",
                 address = address,
-                birthDate = "",
-                photoUri = photoUri
+                birthDate = ""
             )
         )
 
@@ -140,12 +138,6 @@ class UserRepository(
             com.example.appstorefit_grupo1.session.SessionManager.user = fresh
         }
         return fresh
-    }
-
-    suspend fun updatePhotoByEmail(email: String, uri: String): Result<Unit> {
-        val rows = userDao.updatePhotoByEmail(email.trim().lowercase(), uri)
-        return if (rows > 0) Result.success(Unit)
-        else Result.failure(IllegalStateException("No se pudo guardar la foto"))
     }
 
 }

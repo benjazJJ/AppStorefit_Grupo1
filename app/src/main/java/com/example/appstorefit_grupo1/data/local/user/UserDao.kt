@@ -12,21 +12,24 @@ interface UserDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertar(user: UserEntity): Long
 
-    @Query("SELECT * FROM users WHERE email = :email LIMIT 1")
+    // Obtener un usuario por email
+    @Query("SELECT * FROM usuarios WHERE correo_electronico = :email LIMIT 1")
     suspend fun getByEmail(email: String): UserEntity?
 
-    @Query("SELECT * FROM users WHERE rut = :rut LIMIT 1")
+    // Obtener un usuario por rut
+    @Query("SELECT * FROM usuarios WHERE rut = :rut LIMIT 1")
     suspend fun getByRut(rut: String): UserEntity?
 
-    @Query("SELECT * FROM users ORDER BY rut ASC")
+    // Obtener todos los usuarios
+    @Query("SELECT * FROM usuarios ORDER BY rut ASC")
     suspend fun getAll(): List<UserEntity>
 
-    @Query("SELECT COUNT(*) FROM users")
+    // Cantidad de registros
+    @Query("SELECT COUNT(*) FROM usuarios")
     suspend fun count(): Int
 
     @Update
     suspend fun actualizar(user: UserEntity): Int
 
-    @Query("UPDATE users SET photoUri = :uri WHERE email = :email")
-    suspend fun updatePhotoByEmail(email: String, uri: String): Int
+
 }

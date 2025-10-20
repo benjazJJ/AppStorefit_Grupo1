@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Person            // <-- NUEVO
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -156,8 +156,7 @@ private fun GraphHost(
                         restoreState = true
                     }
                 },
-                onGoLogin = { navController.navigate(Route.Login.path) },
-                onGoToCamera = { navController.navigate(Route.Camera.path) }
+                onGoLogin = { navController.navigate(Route.Login.path) }
             )
         }
 
@@ -172,16 +171,6 @@ private fun GraphHost(
 
         composable(Route.EditarContrasena.path) {
             EditarContrasenaScreen(navController = navController)
-        }
-
-        composable(Route.Camera.path) {
-            CameraScreen(
-                onPhotoTaken = {
-                    navController.previousBackStackEntry?.savedStateHandle?.set("photo_uri", it)
-                    navController.popBackStack()
-                },
-                onCancel = { navController.popBackStack() }
-            )
         }
 
 
