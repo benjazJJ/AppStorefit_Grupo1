@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,7 +55,6 @@ fun DetalleProductoScreen(
         }
     }
 
-    // Cargar variantes (idCategoria + modelo)
     LaunchedEffect(idCategoria, modelo) {
         variantes = repo.getByCategoria(idCategoria)
             .getOrDefault(emptyList())
@@ -62,7 +63,6 @@ fun DetalleProductoScreen(
 
         if (variantes.isNotEmpty()) {
             selectedTalla = variantes.first().talla
-            // Si aún no hay color seleccionado, parte con el negro (si existe) o el primero
             selectedColor = variantes.firstOrNull { it.color == "Negro con detalles blancos" }?.color
                 ?: variantes.first().color
         } else {
@@ -72,7 +72,6 @@ fun DetalleProductoScreen(
 
     val tallas = remember(variantes) { variantes.map { it.talla }.distinct() }
 
-    // Imagen según categoría + color seleccionado
     val imagenRes = remember(idCategoria, selectedColor) {
         val blanco = selectedColor == "Blanco con detalles negros"
         when (idCategoria) {
@@ -91,9 +90,14 @@ fun DetalleProductoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = modelo) },
+                title = { Text("Detalle producto") },
                 navigationIcon = {
-                    TextButton(onClick = { navController.popBackStack() }) { Text("Volver") }
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
+                    }
                 }
             )
         }
@@ -117,7 +121,7 @@ fun DetalleProductoScreen(
                 contentScale = ContentScale.Crop
             )
 
-            // Selector de color (BAJO LA FOTO)
+            // Selector de color bajo la foto
             Column {
                 Text("Color", fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -136,10 +140,11 @@ fun DetalleProductoScreen(
                 }
             }
 
-            // Información y selección de talla
+            // Info + tallas
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Título con categoría + modelo
                 Text(
-                    text = tituloPorCategoria(idCategoria),
+                    text = "${tituloPorCategoria(idCategoria)}  –  $modelo",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
