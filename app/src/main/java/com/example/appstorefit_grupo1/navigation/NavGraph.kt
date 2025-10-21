@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -33,10 +32,11 @@ private data class TopDest(
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
+// Bottom/Rail: Productos, Carrito, Perfil
 private val TOP_DESTINATIONS = listOf(
-    TopDest(Route.Home.path, "Inicio", Icons.Filled.Home),
     TopDest(Route.Productos.path, "Productos", Icons.Filled.ShoppingCart),
-    TopDest(Route.Perfil.path, "Perfil", Icons.Filled.Person)
+    TopDest(Route.Carrito.path,   "Carrito",   Icons.Filled.ShoppingCart),
+    TopDest(Route.Perfil.path,    "Perfil",    Icons.Filled.Person)
 )
 
 @Composable
@@ -47,7 +47,6 @@ fun AppNavGraph(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    // Helper de navegación que preserva estado y evita duplicados
     fun navigateTopLevel(toRoute: String) {
         if (toRoute == currentRoute) return
         navController.navigate(toRoute) {
@@ -61,11 +60,9 @@ fun AppNavGraph(
 
     when (widthClass) {
         WindowWidthSizeClass.Expanded -> {
-            // Tablets grandes / desktop: NavigationRail + contenido
             Row(Modifier.fillMaxSize()) {
                 NavigationRail {
                     TOP_DESTINATIONS.forEach { dest ->
-                        // Mantener "Productos" seleccionado también en Detalle
                         val selected =
                             if (dest.route == Route.Productos.path)
                                 (currentRoute?.startsWith(Route.Productos.path) == true) ||
@@ -87,15 +84,12 @@ fun AppNavGraph(
             }
         }
         else -> {
-            // Teléfonos / medium: NavigationBar inferior + contenido
             androidx.compose.material3.Scaffold(
                 bottomBar = {
-                    // Oculta la barra en pantallas que no sean top-level (por ejemplo Login/Register)
                     if (TOP_DESTINATIONS.any { currentRoute?.startsWith(it.route) == true } ||
                         currentRoute?.startsWith(Route.DetalleProducto.path) == true) {
                         NavigationBar {
                             TOP_DESTINATIONS.forEach { dest ->
-                                // Mantener "Productos" seleccionado también en Detalle
                                 val selected =
                                     if (dest.route == Route.Productos.path)
                                         (currentRoute?.startsWith(Route.Productos.path) == true) ||
@@ -122,8 +116,6 @@ fun AppNavGraph(
     }
 }
 
-//NavHost real con todas las rutas. Separado para poder reutilizarlo en ambos layouts (Rail o BottomBar).
-
 @Composable
 private fun GraphHost(
     navController: NavHostController,
@@ -133,21 +125,12 @@ private fun GraphHost(
         navController = navController,
         startDestination = Route.Login.path
     ) {
-        composable(Route.Home.path) {
-            HomeScreen(
-                widthClass = widthClass,
-                onGoLogin = { navController.navigate(Route.Login.path) },
-                onGoRegister = { navController.navigate(Route.Register.path) },
-                onGoProductos = { navController.navigate(Route.Productos.path) }
-            )
-        }
-
-        // Login: al terminar, reemplaza el stack para no volver con "atrás"
+        // Login -> Productos
         composable(Route.Login.path) {
             LoginScreenVm(
                 widthClass = widthClass,
                 onLoginOkNavigateHome = {
-                    navController.navigate(Route.Home.path) {
+                    navController.navigate(Route.Productos.path) {
                         popUpTo(Route.Login.path) { inclusive = true }
                         launchSingleTop = true
                         restoreState = true
@@ -157,7 +140,7 @@ private fun GraphHost(
             )
         }
 
-        // Register: usa el wrapper con VM (NO la UI directa)
+        // Register
         composable(Route.Register.path) {
             RegisterScreenVm(
                 widthClass = widthClass,
@@ -172,11 +155,17 @@ private fun GraphHost(
             )
         }
 
+        // Productos (inicio real tras login)
         composable(Route.Productos.path) {
             ProductosScreen(widthClass = widthClass, nav = navController)
         }
 
-        // ---- PERFIL (ver perfil) ----
+        // Carrito
+        composable(Route.Carrito.path) {
+            CarritoScreen(navController)
+        }
+
+        // Perfil
         composable(Route.Perfil.path) {
             PerfilScreen(navController = navController)
         }
@@ -185,8 +174,7 @@ private fun GraphHost(
             EditarContrasenaScreen(navController = navController)
         }
 
-
-        //Detalle de producto con query params (path fijo)
+        // Detalle de producto (path fijo con query params)
         composable(
             route = "${Route.DetalleProducto.path}?idCategoria={idCategoria}&modelo={modelo}",
             arguments = listOf(

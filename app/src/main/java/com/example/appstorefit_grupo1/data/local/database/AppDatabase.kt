@@ -19,15 +19,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+// NUEVO: imports del carrito
+import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao          // <--
+import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity      // <--
+
 @Database(
     entities = [
         UserEntity::class,
         RegistroEntity::class,
         RolEntity::class,
         CategoriaEntity::class,
-        ProductosEntity::class
+        ProductosEntity::class,
+        CarritoEntity::class             // <-- agregado
     ],
-    version = 19,
+    version = 20,                        // <-- sube versión (antes 19)
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun rolDao(): RolDao
     abstract fun categoriaDao(): CategoriaDao
     abstract fun productosDao(): ProductosDao
+    abstract fun carritoDao(): CarritoDao      // <-- agregado
 
     private class SeedCallback(
         private val scope: CoroutineScope,
@@ -150,6 +156,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DB_NAME
                 )
+                    // Si subes versión y no quieres escribir migraciones ahora,
+                    // descomenta la siguiente línea para evitar crashes en desarrollo:
+                    // .fallbackToDestructiveMigration()        // <--
                     .addCallback(callback)
                     .build()
                 INSTANCE = instance

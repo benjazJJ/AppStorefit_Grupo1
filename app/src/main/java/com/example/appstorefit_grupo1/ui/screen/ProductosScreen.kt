@@ -41,6 +41,7 @@ data class Producto(
 fun ProductosScreen(
     widthClass: WindowWidthSizeClass,
     nav: NavController,
+    // Se mantiene por compatibilidad si lo usabas en previews o llamados anteriores (no se usa ya)
     onAddToCart: (Producto) -> Unit = { },
     onOpenDetalle: (Long, String) -> Unit = { idCategoria, modelo ->
         nav.navigate(Route.DetalleProducto.create(idCategoria, modelo))
@@ -62,10 +63,10 @@ fun ProductosScreen(
     // ➜ Solo tus 4 categorías, con modelo por categoría (coincide con el seed)
     val productos = remember {
         listOf(
-            Producto("1", idCategoria = 1L, modelo = "XFITRX",   nombre = "Polera StoreFit (XFITRX)",    precio = 9_990,  imagenRes = R.drawable.polerastorefit),
-            Producto("2", idCategoria = 3L, modelo = "FLEXRUN",  nombre = "Buzo StoreFit (FLEXRUN)",     precio = 14_990, imagenRes = R.drawable.buzostorefit),
-            Producto("3", idCategoria = 2L, modelo = "WARMGLIDE",nombre = "Polerón StoreFit (WARMGLIDE)",precio = 17_990, imagenRes = R.drawable.poleronstorefit),
-            Producto("4", idCategoria = 4L, modelo = "FITQUEEN", nombre = "Conjunto Femenino (FITQUEEN)",precio = 19_990, imagenRes = R.drawable.topmujerstorefit),
+            Producto("1", idCategoria = 1L, modelo = "XFITRX",    nombre = "Polera StoreFit (XFITRX)",     precio = 9_990,  imagenRes = R.drawable.polerastorefit),
+            Producto("2", idCategoria = 3L, modelo = "FLEXRUN",   nombre = "Buzo StoreFit (FLEXRUN)",      precio = 14_990, imagenRes = R.drawable.buzostorefit),
+            Producto("3", idCategoria = 2L, modelo = "WARMGLIDE", nombre = "Polerón StoreFit (WARMGLIDE)", precio = 17_990, imagenRes = R.drawable.poleronstorefit),
+            Producto("4", idCategoria = 4L, modelo = "FITQUEEN",  nombre = "Conjunto Femenino (FITQUEEN)", precio = 19_990, imagenRes = R.drawable.topmujerstorefit),
         )
     }
 
@@ -113,13 +114,7 @@ fun ProductosScreen(
 
                         Spacer(Modifier.height(10.dp))
 
-                        Button(
-                            onClick = { onAddToCart(p) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) { Text("Agregar") }
-
-                        Spacer(Modifier.height(8.dp))
-
+                        // 👉 Solo queda el botón Detalle
                         OutlinedButton(
                             onClick = { onOpenDetalle(p.idCategoria, p.modelo) },
                             modifier = Modifier.fillMaxWidth(),
