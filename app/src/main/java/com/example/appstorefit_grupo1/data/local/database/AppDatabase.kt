@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
         CategoriaEntity::class,
         ProductosEntity::class
     ],
-    version = 13,
+    version = 19,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -101,47 +101,35 @@ abstract class AppDatabase : RoomDatabase() {
                 cDao.insert(CategoriaEntity(nombre = "Conjunto Femenino"))
             }
 
-            // --- Productos ---
+            // --- Productos (exactamente 4, uno por categoría) ---
             val hayProductos = kotlin.runCatching { pDao.count() }.getOrDefault(0) > 0
             if (!hayProductos) {
-                val preciosPorCategoria = mapOf(
-                    1L to 9990,
-                    2L to 17990,
-                    3L to 14990,
-                    4L to 19990
-                )
-                val modeloPorCategoria = mapOf(
-                    1L to "XFITRX",
-                    2L to "WARMGLIDE",
-                    3L to "FLEXRUN",
-                    4L to "FITQUEEN"
-                )
-                val tallas = listOf("XS","S","M","L","XL")
-                val colores = listOf(
-                    "Blanco con detalles negros",
-                    "Negro con detalles blancos"
-                )
-                val stockInicial = 12
+                data class ProdBase(val idCat: Long, val modelo: String, val precio: Int)
 
-                for ((idCat, precio) in preciosPorCategoria) {
-                    val modelo = modeloPorCategoria[idCat] ?: "GENERIC"
-                    for (t in tallas) {
-                        for (c in colores) {
-                            val nextId = (pDao.getMaxIdForCategory(idCat) ?: 0L) + 1L
-                            pDao.insert(
-                                ProductosEntity(
-                                    idCategoria = idCat,
-                                    idProducto  = nextId,
-                                    marca  = "StoreFit",
-                                    modelo = modelo,
-                                    color  = c,
-                                    talla  = t,
-                                    precio = precio,
-                                    stock  = stockInicial
-                                )
-                            )
-                        }
-                    }
+                val base = listOf(
+                    ProdBase(1L, "XFITRX",    9990),   // Poleras
+                    ProdBase(2L, "WARMGLIDE", 17990),  // Poleron
+                    ProdBase(3L, "FLEXRUN",   14990),  // Buzo
+                    ProdBase(4L, "FITQUEEN",  19990)   // Conjunto Femenino
+                )
+
+                val colorUnico = "Negro con detalles blancos"
+                val tallaUnica = "M"
+                val stockIni   = 80
+
+                base.forEach { spec ->
+                    pDao.insert(
+                        ProductosEntity(
+                            idCategoria = spec.idCat,
+                            idProducto  = 1L,
+                            marca       = "StoreFit",
+                            modelo      = spec.modelo,
+                            color       = colorUnico,
+                            talla       = tallaUnica,
+                            precio      = spec.precio,
+                            stock       = stockIni
+                        )
+                    )
                 }
             }
         }

@@ -52,7 +52,7 @@ interface ProductosDao {
         idProducto: Long,
         cantidad: Int
     ): Int
-    // ProductosDao.kt
+
     @Query("""
     SELECT * FROM producto
     WHERE id_categoria = :idCategoria AND modelo = :modelo
