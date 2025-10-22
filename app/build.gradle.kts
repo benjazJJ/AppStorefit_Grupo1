@@ -85,4 +85,7 @@ dependencies {
 
     // Mostrar la foto (Coil)
     implementation("io.coil-kt:coil-compose:2.6.0")
+
+    //Libreria Cache ( carga de imagenes en compose )
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }
