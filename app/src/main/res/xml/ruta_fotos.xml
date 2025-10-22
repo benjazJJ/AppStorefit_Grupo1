@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Directorio nuevo interno del cache para guardar fotos -->
+    <cache-path
+        name="camera_cache"
+        path="images/"/>
+</paths>
