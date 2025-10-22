@@ -1,6 +1,5 @@
 package com.example.appstorefit_grupo1.data.repository
 
-
 import androidx.room.withTransaction
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.local.registro.RegistroDao
@@ -16,7 +15,7 @@ class UserRepository(
     private val registroDao: RegistroDao
 ) {
 
-    //INICIO DE SESIÓN
+    // ================== INICIO DE SESIÓN ==================
     suspend fun login(email: String, pass: String): Result<UserEntity> {
         val correoCanonico = emailCanonico(email)
         val passIngresada  = pass
@@ -31,14 +30,14 @@ class UserRepository(
         val user = userDao.getByRut(registro.rut)
             ?: return Result.failure(IllegalStateException("Perfil no encontrado"))
 
-        // Mantén sesión simple en memoria
+        // Sesión en memoria
         SessionManager.user = user
         SessionManager.roleId = registro.rolId
 
         return Result.success(user)
     }
 
-    //REGISTRO
+    // ================== REGISTRO ==================
     suspend fun register(
         rut: String,
         name: String,
@@ -50,12 +49,13 @@ class UserRepository(
     ): Result<Long> {
         val correoCanonico = emailCanonico(email)
         val passIngresada  = pass
+        val phoneCanon     = phoneCanonico(phone)
 
         if (correoCanonico.isBlank() || passIngresada.isBlank() || name.isBlank() || rut.isBlank()) {
             return Result.failure(IllegalArgumentException("Completa los campos obligatorios"))
         }
 
-        // Pre-chequeos RUT y CORREO y TELEFONO
+        // Pre-chequeos
         val yaExisteRut = userDao.getByRut(rut) != null
         if (yaExisteRut) return Result.failure(IllegalArgumentException("RUT ya registrado"))
 
@@ -65,15 +65,14 @@ class UserRepository(
         val existeEnUsuarios = userDao.existsEmail(correoCanonico) > 0
         if (existeEnUsuarios) return Result.failure(IllegalArgumentException("Correo ya registrado"))
 
-        if (phone.isNotBlank()) {
-            val yaExisteTelefono = isPhoneTaken(phone)
+        if (phoneCanon.isNotBlank()) {
+            val yaExisteTelefono = isPhoneTaken(phoneCanon)
             if (yaExisteTelefono) {
                 return Result.failure(IllegalArgumentException("Este teléfono ya pertenece a otro usuario."))
             }
         }
 
-
-        // insertar usuario + registro con el MISMO correo canónico
+        // Insertar usuario + registro con el MISMO correo canónico
         return runCatching {
             var idRegistroCreado: Long = -1L
             db.withTransaction {
@@ -82,7 +81,7 @@ class UserRepository(
                         rut = rut,
                         name = name,
                         email = correoCanonico,
-                        phone = if (phone.isBlank()) null else phone,
+                        phone = if (phoneCanon.isBlank()) null else phoneCanon,
                         lastName = "",
                         address = address,
                         birthDate = ""
@@ -104,24 +103,15 @@ class UserRepository(
             onFailure = { error ->
                 val mensajeParaUsuario =
                     if (error is android.database.sqlite.SQLiteConstraintException) {
-                        val detalle = error.message.orEmpty()
-                        val d = detalle.lowercase()
-
+                        val detalle = error.message.orEmpty().lowercase()
                         when {
-                            // correo único
-                            "usuarios.correo_electronico" in d || "index_usuarios_correo_electronico" in d ->
+                            "usuarios.correo_electronico" in detalle || "index_usuarios_correo_electronico" in detalle ->
                                 "Correo ya registrado"
-
-                            // teléfono único
-                            "usuarios.telefono" in d || "index_usuarios_telefono" in d ->
+                            "usuarios.telefono" in detalle || "index_usuarios_telefono" in detalle ->
                                 "Este teléfono ya pertenece a otro usuario."
-
-                            // rut único
-                            "usuarios.rut" in d || "index_usuarios_rut" in d || "primary key" in d ->
+                            "usuarios.rut" in detalle || "index_usuarios_rut" in detalle || "primary key" in detalle ->
                                 "RUT ya registrado"
-
-                            else ->
-                                "No se pudo registrar por una restricción de unicidad."
+                            else -> "No se pudo registrar por una restricción de unicidad."
                         }
                     } else {
                         "No se pudo registrar: ${error.message}"
@@ -131,7 +121,7 @@ class UserRepository(
         )
     }
 
-    //CHEQUEOS DE UNICIDAD EN TIEMPO REAL
+    // ================== CHEQUEOS DE UNICIDAD ==================
     suspend fun isEmailTaken(email: String): Boolean {
         val canon = emailCanonico(email)
         if (canon.isBlank()) return false
@@ -145,15 +135,18 @@ class UserRepository(
         return userDao.getByRut(rut) != null
     }
 
+    private fun phoneCanonico(raw: String): String =
+        raw.filter { it.isDigit() }
     suspend fun isPhoneTaken(phone: String): Boolean {
-        if (phone.isBlank()) return false
-        return userDao.existsPhone(phone) > 0
+        val p = phoneCanonico(phone)
+        if (p.isBlank()) return false
+        return userDao.existsPhone(p) > 0
     }
 
-    suspend fun getRegistroByUsuario(email: String): RegistroEntity? =
+    suspend fun getRegistroByUsuario(email: String): com.example.appstorefit_grupo1.data.local.registro.RegistroEntity? =
         registroDao.getByUsuario(emailCanonico(email))
 
-    //CONTRASEÑA
+    // ================== CONTRASEÑA ==================
     suspend fun changePassword(
         email: String,
         oldPass: String,
@@ -190,7 +183,7 @@ class UserRepository(
         else Result.failure(IllegalStateException("No se pudo actualizar la contraseña"))
     }
 
-    //PERFIL
+    // ================== PERFIL ==================
     suspend fun updateAddressByEmail(email: String, newAddress: String): Result<Unit> {
         val correoCanonico = emailCanonico(email)
         val user = userDao.getByEmail(correoCanonico)
@@ -217,4 +210,49 @@ class UserRepository(
         }
         return fresh
     }
+
+    // ================== FOTO DE PERFIL (NUEVO) ==================
+
+    /** Guarda/actualiza la foto de perfil (URI en texto). */
+    suspend fun saveUserPhoto(email: String, uri: String): Result<Unit> {
+        val canon = emailCanonico(email)
+        if (canon.isBlank() || uri.isBlank()) {
+            return Result.failure(IllegalArgumentException("Datos inválidos"))
+        }
+        val rows = userDao.updatePhotoByEmail(canon, uri)
+        return if (rows > 0) {
+            // refresca sesión si corresponde
+            SessionManager.user?.let { current ->
+                if (current.email == canon) {
+                    SessionManager.user = current.copy(photoUri = uri)
+                }
+            }
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException("No se pudo guardar la foto de perfil"))
+        }
+    }
+
+    /** Borra la foto de perfil (deja NULL). */
+    suspend fun clearUserPhoto(email: String): Result<Unit> {
+        val canon = emailCanonico(email)
+        if (canon.isBlank()) {
+            return Result.failure(IllegalArgumentException("Email inválido"))
+        }
+        val rows = userDao.updatePhotoByEmail(canon, null)
+        return if (rows > 0) {
+            SessionManager.user?.let { current ->
+                if (current.email == canon) {
+                    SessionManager.user = current.copy(photoUri = null)
+                }
+            }
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException("No se pudo eliminar la foto de perfil"))
+        }
+    }
+
+    /** Devuelve la URI (String) de la foto de perfil, o null si no hay. */
+    suspend fun getUserPhoto(email: String): String? =
+        userDao.getPhotoUriByEmail(emailCanonico(email))
 }

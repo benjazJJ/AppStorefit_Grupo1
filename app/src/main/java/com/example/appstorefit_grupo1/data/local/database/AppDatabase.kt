@@ -32,7 +32,7 @@ import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
         ProductosEntity::class,
         CarritoEntity::class
     ],
-    version = 24,                // ↑ subo por encima de 23 (compañero) y 20 (tú)
+    version = 30,                // ↑ subo por encima de 23 (compañero) y 20 (tú)
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -165,7 +165,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     // Si subes versión y no quieres escribir migraciones ahora,
                     // puedes habilitar esto en desarrollo:
-                    // .fallbackToDestructiveMigration()
+                    //.fallbackToDestructiveMigration(false)
                     .addCallback(callback)
                     .build()
                 INSTANCE = instance

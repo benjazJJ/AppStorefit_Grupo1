@@ -36,4 +36,10 @@ interface UserDao {
     @Update
     suspend fun actualizar(user: UserEntity): Int
 
+    // ------- NUEVO: foto de perfil -------
+    @Query("UPDATE usuarios SET foto_uri = :uri WHERE correo_electronico = :email")
+    suspend fun updatePhotoByEmail(email: String, uri: String?): Int
+
+    @Query("SELECT foto_uri FROM usuarios WHERE correo_electronico = :email LIMIT 1")
+    suspend fun getPhotoUriByEmail(email: String): String?
 }

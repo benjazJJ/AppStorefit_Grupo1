@@ -35,4 +35,7 @@ data class UserEntity(
     @ColumnInfo(name = "fec_nac")
     val birthDate: String = "",
 
-    )
+    // 🔹 NUEVO: URI de la foto de perfil (persistente)
+    @ColumnInfo(name = "foto_uri")
+    val photoUri: String? = null
+)
