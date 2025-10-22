@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
+import com.example.appstorefit_grupo1.components.SuccessLoginDialog
 
 @Composable
 fun LoginScreenVm(
@@ -45,9 +46,15 @@ fun LoginScreenVm(
 
     val state by vm.login.collectAsStateWithLifecycle()
 
+    // Mostrar diálogo de éxito y navegar al cerrarse
     if (state.success) {
-        vm.clearLoginResult()
-        onLoginOkNavigateHome()
+        SuccessLoginDialog(
+            message = "¡Sesión iniciada exitosamente!",
+            onDismiss = {
+                vm.clearLoginResult()
+                onLoginOkNavigateHome()
+            }
+        )
     }
 
     LoginScreen(
@@ -74,16 +81,16 @@ private fun GradientButton(
     enabled: Boolean = true,
     loading: Boolean = false
 ) {
-    val cs = MaterialTheme.colorScheme
+    val colorScheme = MaterialTheme.colorScheme
     val gradient = Brush.horizontalGradient(
-        colors = listOf(cs.tertiary, cs.primary, cs.secondary)
+        colors = listOf(colorScheme.tertiary, colorScheme.primary, colorScheme.secondary)
     )
     Surface(
         enabled = enabled,
         onClick = onClick,
         shape = RoundedCornerShape(10.dp),
         color = Color.Transparent,
-        contentColor = cs.onPrimary,
+        contentColor = colorScheme.onPrimary,
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         modifier = modifier
@@ -101,7 +108,7 @@ private fun GradientButton(
                         modifier = Modifier
                             .size(18.dp)
                             .padding(end = 8.dp),
-                        color = cs.onPrimary
+                        color = colorScheme.onPrimary
                     )
                     Text(text)
                 }
@@ -128,25 +135,25 @@ private fun LoginScreen(
     onSubmit: () -> Unit,
     onGoRegister: () -> Unit,
 ) {
-    val cs = MaterialTheme.colorScheme
+    val colorScheme = MaterialTheme.colorScheme
     val maxW = when (widthClass) {
         WindowWidthSizeClass.Expanded -> 600.dp
         WindowWidthSizeClass.Medium   -> 520.dp
         else                          -> 360.dp
     }
 
-    // Mostrar/ocultar contraseña
     var showPass by rememberSaveable { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(cs.surfaceVariant)
-            .padding(16.dp),
+            .background(colorScheme.surfaceVariant)
+            .padding(16.dp)
+            .imePadding(),
         contentAlignment = Alignment.Center
     ) {
         ElevatedCard(
-            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+            colors = CardDefaults.elevatedCardColors(containerColor = colorScheme.surface),
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -159,7 +166,7 @@ private fun LoginScreen(
                 Text(
                     text = "Iniciar sesión",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = cs.onSurface,
+                    color = colorScheme.onSurface,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Spacer(Modifier.height(8.dp))
@@ -167,7 +174,7 @@ private fun LoginScreen(
                     text = "Bienvenid@ a StoreFit",
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = cs.onSurfaceVariant
+                    color = colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(20.dp))
 
@@ -185,7 +192,7 @@ private fun LoginScreen(
                             exit = fadeOut() + shrinkVertically()
                         ) {
                             if (emailError != null) {
-                                Text(emailError, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                                Text(emailError, color = colorScheme.error, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     },
@@ -194,12 +201,12 @@ private fun LoginScreen(
                         imeAction = ImeAction.Next
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = cs.primary,
-                        unfocusedBorderColor = cs.outline,
-                        focusedLabelColor = cs.primary,
-                        cursorColor = cs.primary,
-                        focusedContainerColor = cs.surface,
-                        unfocusedContainerColor = cs.surface
+                        focusedBorderColor = colorScheme.primary,
+                        unfocusedBorderColor = colorScheme.outline,
+                        focusedLabelColor = colorScheme.primary,
+                        cursorColor = colorScheme.primary,
+                        focusedContainerColor = colorScheme.surface,
+                        unfocusedContainerColor = colorScheme.surface
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -229,7 +236,7 @@ private fun LoginScreen(
                             exit = fadeOut() + shrinkVertically()
                         ) {
                             if (passError != null) {
-                                Text(passError, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                                Text(passError, color = colorScheme.error, style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     },
@@ -257,7 +264,7 @@ private fun LoginScreen(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         errorMsg,
-                        color = cs.error,
+                        color = colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center
                     )

@@ -83,9 +83,10 @@ dependencies {
     // Compose activity (para launchers)
     implementation("androidx.activity:activity-compose:1.9.2")
 
-    // Mostrar la foto (Coil)
-    implementation("io.coil-kt:coil-compose:2.6.0")
-
     //Libreria Cache ( carga de imagenes en compose )
     implementation("io.coil-kt:coil-compose:2.7.0")
+
+    //ANIMACIÓN TIPO SWEETALERT PARA INICIO DE SESIÓN EXITOSO
+    implementation("com.airbnb.android:lottie-compose:6.5.0")
+
 }

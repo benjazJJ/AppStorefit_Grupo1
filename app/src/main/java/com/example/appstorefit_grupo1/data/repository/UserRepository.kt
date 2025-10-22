@@ -1,11 +1,13 @@
 package com.example.appstorefit_grupo1.data.repository
 
+
 import androidx.room.withTransaction
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.local.registro.RegistroDao
 import com.example.appstorefit_grupo1.data.local.registro.RegistroEntity
 import com.example.appstorefit_grupo1.data.local.user.UserDao
 import com.example.appstorefit_grupo1.data.local.user.UserEntity
+import com.example.appstorefit_grupo1.domain.validation.emailCanonico
 import com.example.appstorefit_grupo1.session.SessionManager
 
 class UserRepository(
@@ -13,29 +15,30 @@ class UserRepository(
     private val userDao: UserDao,
     private val registroDao: RegistroDao
 ) {
-    // -------------------- AUTENTICACIÓN --------------------
 
+    //INICIO DE SESIÓN
     suspend fun login(email: String, pass: String): Result<UserEntity> {
-        val emailNorm = email.trim().lowercase()
-        val passNorm  = pass.trim()
+        val correoCanonico = emailCanonico(email)
+        val passIngresada  = pass
 
-        val reg = registroDao.getByUsuario(emailNorm)
+        val registro = registroDao.getByUsuario(correoCanonico)
             ?: return Result.failure(IllegalArgumentException("Usuario no encontrado"))
 
-        if (reg.contrasenia != passNorm) {
+        if (registro.contrasenia != passIngresada) {
             return Result.failure(IllegalArgumentException("Contraseña incorrecta"))
         }
 
-        val user = userDao.getByRut(reg.rut)
+        val user = userDao.getByRut(registro.rut)
             ?: return Result.failure(IllegalStateException("Perfil no encontrado"))
 
         // Mantén sesión simple en memoria
         SessionManager.user = user
-        SessionManager.roleId = reg.rolId
+        SessionManager.roleId = registro.rolId
 
         return Result.success(user)
     }
 
+    //REGISTRO
     suspend fun register(
         rut: String,
         name: String,
@@ -45,74 +48,128 @@ class UserRepository(
         address: String,
         rolId: Long = 1L
     ): Result<Long> {
-        val emailNorm = email.trim().lowercase()
-        val passNorm  = pass.trim()
+        val correoCanonico = emailCanonico(email)
+        val passIngresada  = pass
 
-        if (emailNorm.isBlank() || passNorm.isBlank() || name.isBlank() || rut.isBlank()) {
+        if (correoCanonico.isBlank() || passIngresada.isBlank() || name.isBlank() || rut.isBlank()) {
             return Result.failure(IllegalArgumentException("Completa los campos obligatorios"))
         }
 
-        // Validaciones previas
-        if (registroDao.getByUsuario(emailNorm) != null) {
-            return Result.failure(IllegalArgumentException("Correo ya registrado"))
-        }
-        if (userDao.getByRut(rut) != null) {
-            return Result.failure(IllegalArgumentException("RUT ya registrado"))
+        // Pre-chequeos RUT y CORREO y TELEFONO
+        val yaExisteRut = userDao.getByRut(rut) != null
+        if (yaExisteRut) return Result.failure(IllegalArgumentException("RUT ya registrado"))
+
+        val existeEnRegistro = registroDao.getByUsuario(correoCanonico) != null
+        if (existeEnRegistro) return Result.failure(IllegalArgumentException("Correo ya registrado"))
+
+        val existeEnUsuarios = userDao.existsEmail(correoCanonico) > 0
+        if (existeEnUsuarios) return Result.failure(IllegalArgumentException("Correo ya registrado"))
+
+        if (phone.isNotBlank()) {
+            val yaExisteTelefono = isPhoneTaken(phone)
+            if (yaExisteTelefono) {
+                return Result.failure(IllegalArgumentException("Este teléfono ya pertenece a otro usuario."))
+            }
         }
 
-        // Transacción: inserta usuario + registro atómicamente
+
+        // insertar usuario + registro con el MISMO correo canónico
         return runCatching {
-            var regId: Long = -1L
+            var idRegistroCreado: Long = -1L
             db.withTransaction {
                 userDao.insertar(
                     UserEntity(
                         rut = rut,
                         name = name,
-                        email = emailNorm,
-                        phone = phone,
+                        email = correoCanonico,
+                        phone = if (phone.isBlank()) null else phone,
                         lastName = "",
                         address = address,
                         birthDate = ""
                     )
                 )
-                regId = registroDao.insertar(
+                idRegistroCreado = registroDao.insertar(
                     RegistroEntity(
                         rolId = rolId,
-                        usuario = emailNorm,
-                        contrasenia = passNorm,
+                        usuario = correoCanonico,
+                        contrasenia = passIngresada,
                         rut = rut,
-                        address = address   // usa el campo consistente
+                        address = address
                     )
                 )
             }
-            regId
+            idRegistroCreado
         }.fold(
-            onSuccess = { Result.success(it) },
-            onFailure = { e -> Result.failure(IllegalStateException("No se pudo registrar: ${e.message}")) }
+            onSuccess = { id -> Result.success(id) },
+            onFailure = { error ->
+                val mensajeParaUsuario =
+                    if (error is android.database.sqlite.SQLiteConstraintException) {
+                        val detalle = error.message.orEmpty()
+                        val d = detalle.lowercase()
+
+                        when {
+                            // correo único
+                            "usuarios.correo_electronico" in d || "index_usuarios_correo_electronico" in d ->
+                                "Correo ya registrado"
+
+                            // teléfono único
+                            "usuarios.telefono" in d || "index_usuarios_telefono" in d ->
+                                "Este teléfono ya pertenece a otro usuario."
+
+                            // rut único
+                            "usuarios.rut" in d || "index_usuarios_rut" in d || "primary key" in d ->
+                                "RUT ya registrado"
+
+                            else ->
+                                "No se pudo registrar por una restricción de unicidad."
+                        }
+                    } else {
+                        "No se pudo registrar: ${error.message}"
+                    }
+                Result.failure(IllegalStateException(mensajeParaUsuario))
+            }
         )
     }
 
+    //CHEQUEOS DE UNICIDAD EN TIEMPO REAL
+    suspend fun isEmailTaken(email: String): Boolean {
+        val canon = emailCanonico(email)
+        if (canon.isBlank()) return false
+        val existeEnUsuarios = userDao.existsEmail(canon) > 0
+        val existeEnRegistro = registroDao.getByUsuario(canon) != null
+        return existeEnUsuarios || existeEnRegistro
+    }
+
+    suspend fun isRutTaken(rut: String): Boolean {
+        if (rut.isBlank()) return false
+        return userDao.getByRut(rut) != null
+    }
+
+    suspend fun isPhoneTaken(phone: String): Boolean {
+        if (phone.isBlank()) return false
+        return userDao.existsPhone(phone) > 0
+    }
+
     suspend fun getRegistroByUsuario(email: String): RegistroEntity? =
-        registroDao.getByUsuario(email.trim().lowercase())
+        registroDao.getByUsuario(emailCanonico(email))
 
-    // -------------------- CONTRASEÑA --------------------
-
+    //CONTRASEÑA
     suspend fun changePassword(
         email: String,
         oldPass: String,
         newPass: String,
         confirmPass: String
     ): Result<Unit> {
-        val emailNorm = email.trim().lowercase()
+        val correoCanonico = emailCanonico(email)
         val oldP = oldPass.trim()
         val newP = newPass.trim()
         val conf = confirmPass.trim()
 
-        if (emailNorm.isBlank() || oldP.isBlank() || newP.isBlank() || conf.isBlank()) {
+        if (correoCanonico.isBlank() || oldP.isBlank() || newP.isBlank() || conf.isBlank()) {
             return Result.failure(IllegalArgumentException("Completa todos los campos"))
         }
 
-        val reg = registroDao.getByUsuario(emailNorm)
+        val reg = registroDao.getByUsuario(correoCanonico)
             ?: return Result.failure(IllegalStateException("Usuario no encontrado"))
 
         if (reg.contrasenia != oldP) {
@@ -128,21 +185,19 @@ class UserRepository(
             return Result.failure(IllegalArgumentException("Las contraseñas no coinciden"))
         }
 
-        val rows = registroDao.updatePasswordByUsuario(emailNorm, newP)
+        val rows = registroDao.updatePasswordByUsuario(correoCanonico, newP)
         return if (rows > 0) Result.success(Unit)
         else Result.failure(IllegalStateException("No se pudo actualizar la contraseña"))
     }
 
-    // -------------------- PERFIL --------------------
-
+    //PERFIL
     suspend fun updateAddressByEmail(email: String, newAddress: String): Result<Unit> {
-        val emailNorm = email.trim().lowercase()
-        val user = userDao.getByEmail(emailNorm)
+        val correoCanonico = emailCanonico(email)
+        val user = userDao.getByEmail(correoCanonico)
             ?: return Result.failure(IllegalStateException("Usuario no encontrado"))
 
         val updated = userDao.actualizar(user.copy(address = newAddress))
         return if (updated > 0) {
-            // si el usuario de sesión es el mismo, refresca en memoria
             if (SessionManager.user?.rut == user.rut) {
                 SessionManager.user = user.copy(address = newAddress)
             }
@@ -153,7 +208,7 @@ class UserRepository(
     }
 
     suspend fun getUserByEmail(email: String): UserEntity? =
-        userDao.getByEmail(email.trim().lowercase())
+        userDao.getByEmail(emailCanonico(email))
 
     suspend fun refreshSessionUserByEmail(email: String): UserEntity? {
         val fresh = getUserByEmail(email)

@@ -10,6 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private var emailCheckJob: Job? = null
+private var rutCheckJob: Job? = null
+private var phoneCheckJob: Job? = null
+
+
 data class LoginUiState(
     val email: String = "",
     val pass: String = "",
@@ -107,9 +116,32 @@ class AuthViewModel(
     // ---------- REGISTRO ----------
     fun onRutChange(value: String) {
         val filtered = value.trim()
+
+        // 1) Validación de formato inmediata (tu validateRut actual)
         _register.update { it.copy(rut = filtered, rutError = validateRut(filtered)) }
+
+        // 2) Debounce para chequear unicidad en BD solo si no hay error de formato
+        rutCheckJob?.cancel()
+        rutCheckJob = viewModelScope.launch {
+            delay(350)
+            val current = _register.value.rut
+            if (_register.value.rutError != null || current.isBlank()) {
+                recomputeRegisterCanSubmit()
+                return@launch
+            }
+
+            val tomado = repository.isRutTaken(current)
+            _register.update {
+                it.copy(
+                    rutError = if (tomado) "RUT ya registrado" else null
+                )
+            }
+            recomputeRegisterCanSubmit()
+        }
+
         recomputeRegisterCanSubmit()
     }
+
 
     fun onNameChange(value: String) {
         val filtered = value.filter { it.isLetter() || it.isWhitespace() }
@@ -118,15 +150,62 @@ class AuthViewModel(
     }
 
     fun onRegisterEmailChange(value: String) {
+        // 1) Validación de formato inmediata
         _register.update { it.copy(email = value, emailError = validateEmail(value)) }
+
+        // 2) Debounce para chequear unicidad en BD solo si no hay error de formato
+        emailCheckJob?.cancel()
+        emailCheckJob = viewModelScope.launch {
+            delay(350)
+            val current = _register.value.email
+            // si el formato es inválido o está vacío, no consultamos BD
+            if (_register.value.emailError != null || current.isBlank()) {
+                recomputeRegisterCanSubmit()
+                return@launch
+            }
+
+            val tomado = repository.isEmailTaken(current)
+            _register.update {
+                it.copy(
+                    emailError = if (tomado) "Correo ya registrado" else null
+                )
+            }
+            recomputeRegisterCanSubmit()
+        }
+
         recomputeRegisterCanSubmit()
     }
 
     fun onPhoneChange(value: String) {
+        // 1) dejar solo dígitos
         val digits = value.filter { it.isDigit() }
+
+        // 2) validación inmediata (formato/longitud) usando validateTelefono
         _register.update { it.copy(phone = digits, phoneError = validateTelefono(digits)) }
+
+        // 3) debounce para chequear unicidad SOLO si no hay error de formato
+        phoneCheckJob?.cancel()
+        phoneCheckJob = viewModelScope.launch {
+            delay(350)
+            val current = _register.value.phone
+            val hayErrorFormato = _register.value.phoneError != null
+
+            if (hayErrorFormato || current.isBlank()) {
+                recomputeRegisterCanSubmit()
+                return@launch
+            }
+
+            val tomado = repository.isPhoneTaken(current)
+            _register.update {
+                it.copy(
+                    phoneError = if (tomado) "Este teléfono ya pertenece a otro usuario." else null
+                )
+            }
+            recomputeRegisterCanSubmit()
+        }
         recomputeRegisterCanSubmit()
     }
+
 
     fun onAddressChange(value: String) {
         _register.update { it.copy(address = value, addressError = null) }
@@ -167,8 +246,8 @@ class AuthViewModel(
                 rut = s.rut,
                 name = s.name,
                 email = s.email,
-                phone = s.phone,
                 address = s.address,
+                phone = s.phone,
                 pass = s.pass
             )
 
@@ -186,7 +265,7 @@ class AuthViewModel(
         }
     }
 
-    fun clearRegisterResult() {
+    fun clearRegisterResult(){
         _register.update { it.copy(success = false, errorMsg = null) }
     }
 }

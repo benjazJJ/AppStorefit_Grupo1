@@ -141,15 +141,16 @@ private fun RegisterScreen(
                 )
 
                 /* RUT */
+                val isRutTaken = errorMsg == "RUT ya registrado"
                 OutlinedTextField(
                     value = rut,
                     onValueChange = onRutChange,
                     label = { Text("RUT") },
                     singleLine = true,
-                    isError = rutError != null,
+                    isError = (rutError != null) || isRutTaken,
                     modifier = Modifier.fillMaxWidth()
                 )
-                AnimatedError(rutError)
+                AnimatedError(rutError ?: (if (isRutTaken) "RUT ya registrado" else null))
 
                 /* Nombre */
                 OutlinedTextField(
@@ -163,28 +164,34 @@ private fun RegisterScreen(
                 AnimatedError(nameError)
 
                 /* Email */
+                val isEmailTaken = errorMsg == "Correo ya registrado"
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
                     label = { Text("Email") },
                     singleLine = true,
-                    isError = emailError != null,
+                    isError = (emailError != null) || isEmailTaken,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth()
                 )
-                AnimatedError(emailError)
+                AnimatedError(emailError ?: (if (isEmailTaken) "Correo ya registrado" else null))
+
+
 
                 /* Teléfono */
+                val isPhoneTaken = errorMsg == "Este teléfono ya pertenece a otro usuario."
                 OutlinedTextField(
                     value = phone,
                     onValueChange = onPhoneChange,
                     label = { Text("Teléfono") },
                     singleLine = true,
-                    isError = phoneError != null,
+                    isError = (phoneError != null) || isPhoneTaken,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                AnimatedError(phoneError)
+                AnimatedError(phoneError ?: (if (isPhoneTaken) "Este teléfono ya pertenece a otro usuario." else null))
+
+
 
                 OutlinedTextField(
                     value = address,
@@ -271,7 +278,6 @@ private fun RegisterScreen(
     }
 }
 
-/* --- Helpers visuales para mantener el mismo diseño que Login --- */
 @Composable
 private fun AnimatedError(msg: String?) {
     val cs = MaterialTheme.colorScheme

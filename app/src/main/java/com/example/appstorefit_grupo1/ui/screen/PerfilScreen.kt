@@ -6,6 +6,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Badge
@@ -44,7 +46,6 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.request.ImageResult
 import com.example.appstorefit_grupo1.components.CampoReadOnlyDegradado
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.UserRepository
@@ -54,24 +55,24 @@ import com.example.appstorefit_grupo1.ui.theme.SF_Blue
 import com.example.appstorefit_grupo1.ui.theme.SF_Purple
 import com.example.appstorefit_grupo1.ui.theme.SF_Teal
 import java.io.File
-import java.util.Date
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
-// crear el rchivo en el cahe
-private fun createTempImageFile( context: Context): File {
+
+// crear el archivo temporal en cache/images
+private fun createTempImageFile(context: Context): File {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-    val storageDir = File(context.cacheDir,"images").apply {
-        if(!exists()) mkdirs()
+    val storageDir = File(context.cacheDir, "images").apply {
+        if (!exists()) mkdirs()
     }
-    return File(storageDir,"IMG_${timeStamp}.jpg")
+    return File(storageDir, "IMG_${timeStamp}.jpg")
 }
 
-
-//obtener la uri del archivo en el cache
+// obtener la Uri del archivo en el cache con FileProvider
 private fun getImageUriForFile(context: Context, file: File): Uri {
     val authority = "${context.packageName}.fileprovider"
-    return FileProvider.getUriForFile(context,authority,file)
+    return FileProvider.getUriForFile(context, authority, file)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -80,7 +81,6 @@ fun PerfilScreen(navController: NavController) {
     val cs = MaterialTheme.colorScheme
     val grad1 = Brush.horizontalGradient(listOf(SF_Teal, SF_Blue))
     val grad2 = Brush.horizontalGradient(listOf(SF_Blue, SF_Purple))
-
 
     //contexto
     val  context = LocalContext.current
@@ -94,7 +94,6 @@ fun PerfilScreen(navController: NavController) {
     ) { success ->
         if(success){
             //si tomo la foto
-
             photoUriString = pendingCaptureUri?.toString()
             Toast.makeText(context,"Foto tomada correctamente", Toast.LENGTH_SHORT).show()
         }else{
@@ -103,85 +102,6 @@ fun PerfilScreen(navController: NavController) {
         }
 
     }
-    ElevatedCard(
-        modifier = Modifier.fillMaxWidth().padding(16.dp)
-    ){
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Captura de foto",
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(12.dp))
-            //si no se too foto texto
-            if(photoUriString.isNullOrEmpty()){
-                Text(
-                    text = "no se ah tomado fotos",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.height(12.dp))
-            }else{
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(Uri.parse(photoUriString)).crossfade(true)
-                        .build(),
-                    contentDescription = "foto tomada",
-                    modifier = Modifier.fillMaxWidth().height(150.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.height(12.dp))
-            }
-            var showDialog by remember { mutableStateOf(false) }
-            //boton  para abir la camara
-            Button(onClick ={
-                val file = createTempImageFile(context)
-                val uri = getImageUriForFile(context,file)
-                pendingCaptureUri = uri
-                takePicturelauncher.launch(uri)
-            }){
-                Text(
-                    if(photoUriString.isNullOrEmpty())"Abrir Camara"
-                    else "Volver a Tomar"
-                )
-            }
-            //boton eliminar foto
-            if(!photoUriString.isNullOrEmpty()){
-                Spacer(Modifier.height(12.dp))
-                OutlinedButton(onClick = {showDialog = true}) {
-                    Text("Eliminar Foto")
-                }
-            }
-            //La alerta
-            if(showDialog){
-                AlertDialog(
-                    onDismissRequest = { showDialog = false },
-                    title = { Text("confirmacion")},
-                    text = { Text( "¿Desea eliminar la foto")},
-                    confirmButton = {
-                        TextButton(onClick = {
-                            photoUriString = null
-                            showDialog = false
-                            Toast.makeText(context,"Foto eliminada", Toast.LENGTH_SHORT).show()
-                        }) {
-                            Text("Aceptar")
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = {
-                            showDialog = false
-                        }) {
-                            Text("Cancelar")
-                        }
-                    }
-                )
-            }
-
-        }
-    }
-
 
     // instancias para refrescar desde Room
     val ctx = LocalContext.current
@@ -205,21 +125,55 @@ fun PerfilScreen(navController: NavController) {
         if (fresh != null) user = fresh
     }
 
+    @Composable
+    fun RoleBox(roleName: String) {
+        val cs = MaterialTheme.colorScheme
+        OutlinedCard(
+            colors = CardDefaults.outlinedCardColors(containerColor = cs.surface),
+            border = CardDefaults.outlinedCardBorder(),
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.medium)
+                .wrapContentWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = cs.primary,
+                    contentColor = cs.onPrimary,
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(MaterialTheme.shapes.small)
+                ) {}
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    roleName.uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = cs.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("MI PERFIL", fontWeight = FontWeight.Bold) })
         }
     ) { inner ->
         val u = user ?: return@Scaffold
-
+        val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
                 .padding(inner)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
 
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
@@ -249,81 +203,120 @@ fun PerfilScreen(navController: NavController) {
                         }
                     )
                 }
-            }
 
-            // Campos con el mismo estilo degradado que EditarContraseña
-            CampoReadOnlyDegradado(
-                etiqueta = "Correo electrónico",
-                valor = u.email,
-                leadingIcon = { Icon(Icons.Filled.AlternateEmail, contentDescription = null) },
-                borderBrush = grad1
-            )
+                // === CÁMARA (VISIBLE EN PERFIL) ===
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Captura de foto",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(12.dp))
 
-            CampoReadOnlyDegradado(
-                etiqueta = "RUT",
-                valor = u.rut,
-                leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
-                borderBrush = grad2
-            )
-
-            CampoReadOnlyDegradado(
-                etiqueta = "Contraseña",
-                valor = "********",
-                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
-                trailingIcon = {
-                    IconButton(onClick = { navController.navigate(Route.EditarContrasena.path) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Editar contraseña")
+                    if (photoUriString.isNullOrEmpty()) {
+                        Text(
+                            text = "no se ah tomado fotos",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(Uri.parse(photoUriString)).crossfade(true)
+                                .build(),
+                            contentDescription = "foto tomada",
+                            modifier = Modifier.fillMaxWidth().height(150.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.height(12.dp))
                     }
-                },
-                borderBrush = grad1
-            )
 
-            CampoReadOnlyDegradado(
-                etiqueta = "Teléfono",
-                valor = u.phone,
-                leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
-                borderBrush = grad2
-            )
+                    var showDialog by remember { mutableStateOf(false) }
 
-            CampoReadOnlyDegradado(
-                etiqueta = "Dirección",
-                valor = u.address,
-                leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                borderBrush = grad1
-            )
-        }
-    }
-}
+                    Button(onClick = {
+                        val file = createTempImageFile(context)
+                        val uri = getImageUriForFile(context, file)
+                        pendingCaptureUri = uri
+                        takePicturelauncher.launch(uri)
+                    }) {
+                        Text(if (photoUriString.isNullOrEmpty()) "Abrir Camara" else "Volver a Tomar")
+                    }
 
-@Composable
-private fun RoleBox(roleName: String) {
-    val cs = MaterialTheme.colorScheme
-    OutlinedCard(
-        colors = CardDefaults.outlinedCardColors(containerColor = cs.surface),
-        border = CardDefaults.outlinedCardBorder(),
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.medium)
-            .wrapContentWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                color = cs.primary,
-                contentColor = cs.onPrimary,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(MaterialTheme.shapes.small)
-            ) {}
-            Spacer(Modifier.width(8.dp))
-            Text(
-                roleName.uppercase(),
-                style = MaterialTheme.typography.labelLarge,
-                color = cs.onSurface,
-                fontWeight = FontWeight.SemiBold
-            )
+                    if (!photoUriString.isNullOrEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedButton(onClick = { showDialog = true }) {
+                            Text("Eliminar Foto")
+                        }
+                    }
+
+                    if (showDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showDialog = false },
+                            title = { Text("confirmacion") },
+                            text = { Text("¿Desea eliminar la foto") },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    photoUriString = null
+                                    showDialog = false
+                                    Toast.makeText(context, "Foto eliminada", Toast.LENGTH_SHORT).show()
+                                }) { Text("Aceptar") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showDialog = false }) { Text("Cancelar") }
+                            }
+                        )
+                    }
+                }
+                // === FIN CÁMARA (VISIBLE EN PERFIL) ===
+
+                // Campos con el mismo estilo degradado que EditarContraseña
+                CampoReadOnlyDegradado(
+                    etiqueta = "Correo electrónico",
+                    valor = u.email,
+                    leadingIcon = { Icon(Icons.Filled.AlternateEmail, contentDescription = null) },
+                    borderBrush = grad1
+                )
+
+                CampoReadOnlyDegradado(
+                    etiqueta = "RUT",
+                    valor = u.rut,
+                    leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
+                    borderBrush = grad2
+                )
+
+                CampoReadOnlyDegradado(
+                    etiqueta = "Contraseña",
+                    valor = "********",
+                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = { navController.navigate(Route.EditarContrasena.path) }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar contraseña")
+                        }
+                    },
+                    borderBrush = grad1
+                )
+
+                CampoReadOnlyDegradado(
+                    etiqueta = "Teléfono",
+                    valor = run {
+                        val telefono = u.phone
+                        if (telefono.isNullOrBlank()) "No registrado"
+                        else (telefono)
+                    },
+                    leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
+                    borderBrush = grad2
+                )
+
+                CampoReadOnlyDegradado(
+                    etiqueta = "Dirección",
+                    valor = u.address,
+                    leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                    borderBrush = grad1
+                )
+            }
         }
     }
 }

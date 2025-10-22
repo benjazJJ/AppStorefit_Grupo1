@@ -7,7 +7,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "usuarios",
-    indices = [Index(value = ["correo_electronico"], unique = true)]
+    indices = [
+        Index(value = ["correo_electronico"], unique = true),
+        Index(value = ["telefono"], unique = true),
+    ]
 )
 data class UserEntity(
     @PrimaryKey
@@ -24,7 +27,7 @@ data class UserEntity(
     val email: String,
 
     @ColumnInfo(name = "telefono")
-    val phone: String = "",
+    val phone: String? = null,
 
     @ColumnInfo(name = "direccion")
     val address: String = "",
@@ -32,5 +35,4 @@ data class UserEntity(
     @ColumnInfo(name = "fec_nac")
     val birthDate: String = "",
 
-    val photoUri: String? = null
-)
+    )

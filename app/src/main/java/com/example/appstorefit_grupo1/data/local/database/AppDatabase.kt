@@ -19,9 +19,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-// NUEVO: imports del carrito
-import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao          // <--
-import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity      // <--
+// NUEVO: imports del carrito (mantengo lo tuyo)
+import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao
+import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
 
 @Database(
     entities = [
@@ -30,9 +30,9 @@ import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity      // <
         RolEntity::class,
         CategoriaEntity::class,
         ProductosEntity::class,
-        CarritoEntity::class             // <-- agregado
+        CarritoEntity::class
     ],
-    version = 20,                        // <-- sube versión (antes 19)
+    version = 24,                // ↑ subo por encima de 23 (compañero) y 20 (tú)
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -41,7 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun rolDao(): RolDao
     abstract fun categoriaDao(): CategoriaDao
     abstract fun productosDao(): ProductosDao
-    abstract fun carritoDao(): CarritoDao      // <-- agregado
+    abstract fun carritoDao(): CarritoDao
 
     private class SeedCallback(
         private val scope: CoroutineScope,
@@ -69,7 +69,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
 
             // --- Usuarios + Registro (emails normalizados en lowercase) ---
-            suspend fun ensureUser(email: String, rut: String, nombre: String, pass: String, rolId: Long) {
+            suspend fun ensureUser(
+                email: String,
+                rut: String,
+                nombre: String,
+                pass: String,
+                rolId: Long
+            ) {
                 val e = email.trim().lowercase()
                 if (regDao.getByUsuario(e) == null) {
                     if (uDao.getByRut(rut) == null) {
@@ -78,6 +84,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 rut = rut,
                                 name = nombre,
                                 email = e,
+                                // Mantengo tu teléfono por defecto (no elimino nada tuyo)
                                 phone = "12345678",
                                 lastName = "",
                                 address = "",
@@ -157,8 +164,8 @@ abstract class AppDatabase : RoomDatabase() {
                     DB_NAME
                 )
                     // Si subes versión y no quieres escribir migraciones ahora,
-                    // descomenta la siguiente línea para evitar crashes en desarrollo:
-                    // .fallbackToDestructiveMigration()        // <--
+                    // puedes habilitar esto en desarrollo:
+                    // .fallbackToDestructiveMigration()
                     .addCallback(callback)
                     .build()
                 INSTANCE = instance

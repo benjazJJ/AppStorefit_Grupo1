@@ -2,14 +2,17 @@ package com.example.appstorefit_grupo1.domain.validation
 
 import android.util.Patterns
 
-//validacion de correo: FORMATO, NO VACIO
 
-fun validateEmail(email: String): String?{
-
-    if(email.isBlank()) return "Campo Email Obligatorio"
-    val ok = Patterns.EMAIL_ADDRESS.matcher(email).matches()
-    return if(!ok) "Formato de correo invalido" else null
+fun validateEmail(email: String): String? {
+    val limpio = email.trim()
+    if (limpio.isEmpty()) return "Campo email obligatorio"
+    val ok = Patterns.EMAIL_ADDRESS.matcher(limpio).matches()
+    return if (!ok) "Formato de correo inválido" else null
 }
+
+fun emailCanonico(raw: String): String =
+    raw.trim().lowercase()
+
 
 //Validacion de Contraseña
 
@@ -37,10 +40,20 @@ fun validateNombre(nombre: String): String?{
 }
 
 //validar telefono
-fun validateTelefono(telefono: String): String?{
-    if (telefono.isBlank()) return "Campo Telefono Obligatorio"
-    if (!telefono.all { it.isDigit() }) return "Deben ser solo Numeros"
-    if (telefono.length !in 8..9) return "El telefono debe tener entre 8 y 9 caracteres"
+fun normalizarTelefono(raw: String): String {
+    var s = raw.trim().replace(Regex("\\D+"), "") // solo dígitos
+    if (s.startsWith("56") && s.length == 11) s = s.drop(2) // +56 / 56
+    if (s.startsWith("0") && s.length == 10) s = s.drop(1)  // 0
+    return s
+}
+
+fun validateTelefono(telefono: String): String? {
+    if (telefono.isBlank()) return "Campo Teléfono Obligatorio"
+    val canon = normalizarTelefono(telefono)
+    if (canon.length != 9) return "El teléfono debe tener 9 dígitos (Chile)"
+    if (!canon.all { it.isDigit() }) return "El teléfono debe contener solo números"
+    if (canon.toSet().size == 1) return "El teléfono ingresado no es válido"
+    if (canon.first() !in '2'..'9') return "El teléfono ingresado no es válido"
     return null
 }
 
@@ -60,6 +73,8 @@ fun validateRut(rut: String): String? {
     // Valida DV (módulo 11)
     return if (calculardv(cuerpo, dvIngresado)) null
     else "RUT no válido (dígito verificador incorrecto)"
+
+
 }
 
 private fun calculardv(numero: String, dvEsperado: String): Boolean {
@@ -78,5 +93,3 @@ private fun calculardv(numero: String, dvEsperado: String): Boolean {
     }
     return dvCalculado == dvEsperado
 }
-
-
