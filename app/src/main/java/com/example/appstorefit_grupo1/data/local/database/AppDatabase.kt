@@ -30,7 +30,7 @@ import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
         ProductosEntity::class,
         CarritoEntity::class
     ],
-    version = 30,
+    version = 31,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -84,7 +84,6 @@ abstract class AppDatabase : RoomDatabase() {
                                 name = nombre,
                                 email = e,
                                 phone = telefono,
-                                lastName = "",
                                 address = "",
                                 birthDate = ""
                             )

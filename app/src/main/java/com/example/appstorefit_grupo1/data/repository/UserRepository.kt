@@ -83,7 +83,6 @@ class UserRepository(
                         name = name,
                         email = correoCanonico,
                         phone = if (phoneCanon.isBlank()) null else phoneCanon,
-                        lastName = "",
                         address = address,
                         birthDate = birthDate
                     )
@@ -212,7 +211,7 @@ class UserRepository(
         return fresh
     }
 
-    // ================== FOTO DE PERFIL (NUEVO) ==================
+    //FOTO DE PERFIL
 
     /** Guarda/actualiza la foto de perfil (URI en texto). */
     suspend fun saveUserPhoto(email: String, uri: String): Result<Unit> {

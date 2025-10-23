@@ -124,8 +124,13 @@ private fun GraphHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Login.path
+        startDestination = Route.Splash.path      // ⬅️ antes era Login
     ) {
+        // ⬇️ NUEVO
+        composable(Route.Splash.path) {
+            SplashScreen(navController)
+        }
+
         // Login -> Productos
         composable(Route.Login.path) {
             LoginScreenVm(
@@ -175,7 +180,7 @@ private fun GraphHost(
             EditarContrasenaScreen(navController = navController)
         }
 
-        // Detalle de producto (path fijo con query params)
+        // Detalle de producto
         composable(
             route = "${Route.DetalleProducto.path}?idCategoria={idCategoria}&modelo={modelo}",
             arguments = listOf(

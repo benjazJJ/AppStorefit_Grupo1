@@ -12,11 +12,12 @@ import kotlinx.coroutines.launch
 
 import kotlinx.coroutines.Job
 
+// ⬇️ NUEVO: para persistir sesión tras login OK
+import com.example.appstorefit_grupo1.session.SessionManager
 
 private var emailCheckJob: Job? = null
 private var rutCheckJob: Job? = null
 private var phoneCheckJob: Job? = null
-
 
 data class LoginUiState(
     val email: String = "",
@@ -41,7 +42,6 @@ data class RegisterUiState(
     val confirm: String = "",
     val birthDate: String = "",
 
-
     val rutError: String? = null,
     val nameError: String? = null,
     val emailError: String? = null,
@@ -51,7 +51,6 @@ data class RegisterUiState(
     val confirmError: String? = null,
     val birthDateError: String? = null,
 
-
     val isSubmitting: Boolean = false,
     val canSubmit: Boolean = false,
     val success: Boolean = false,
@@ -59,7 +58,8 @@ data class RegisterUiState(
 )
 
 class AuthViewModel(
-    private val repository: UserRepository
+    private val repository: UserRepository,
+    private val appContext: android.content.Context
 ) : ViewModel() {
 
     private val _login = MutableStateFlow(LoginUiState())
@@ -96,14 +96,17 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
-            // delay opcional solo para UX
+            //delay para más detalle UI
             delay(250)
 
             val result = repository.login(s.email, s.pass)
-            _login.update {
-                if (result.isSuccess) {
-                    it.copy(isSubmitting = false, success = true, errorMsg = null)
-                } else {
+            if (result.isSuccess) {
+                //Persistir la sesión en DataStore (el repo ya setea SessionManager.user y roleId)
+                SessionManager.persistToStore(appContext)
+
+                _login.update { it.copy(isSubmitting = false, success = true, errorMsg = null) }
+            } else {
+                _login.update {
                     it.copy(
                         isSubmitting = false,
                         success = false,
@@ -146,7 +149,6 @@ class AuthViewModel(
 
         recomputeRegisterCanSubmit()
     }
-
 
     fun onNameChange(value: String) {
         val filtered = value.filter { it.isLetter() || it.isWhitespace() }
@@ -220,7 +222,6 @@ class AuthViewModel(
         }
         recomputeRegisterCanSubmit()
     }
-
 
     fun onAddressChange(value: String) {
         _register.update { it.copy(address = value, addressError = null) }

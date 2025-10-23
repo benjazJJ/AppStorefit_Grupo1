@@ -89,4 +89,8 @@ dependencies {
     //ANIMACIÓN TIPO SWEETALERT PARA INICIO DE SESIÓN EXITOSO
     implementation("com.airbnb.android:lottie-compose:6.5.0")
 
+    //DEPENDENCIA PARA MANEJAR LA SESIÓN DEL USUARIO
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+
 }

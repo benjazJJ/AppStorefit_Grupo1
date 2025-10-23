@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
@@ -227,7 +228,7 @@ fun PerfilScreen(navController: NavController) {
                             model = ImageRequest.Builder(context)
                                 .data(Uri.parse(photoUriString)).crossfade(true)
                                 .build(),
-                            contentDescription = "foto tomada",
+                            contentDescription = "Foto Tomada",
                             modifier = Modifier
                                 .size(140.dp)
                                 .clip(CircleShape),
@@ -346,6 +347,34 @@ fun PerfilScreen(navController: NavController) {
                 leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
                 borderBrush = grad1
             )
+
+            // --- Cerrar sesión ---
+            Spacer(Modifier.height(16.dp))
+
+            Button(
+                onClick = {
+                    // limpiar sesión
+                    SessionManager.user = null
+                    SessionManager.roleId = null
+
+                    // volver al Login limpiando el back stack
+                    navController.navigate(Route.Login.path) {
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge)
+            }
+
         }
     }
 }

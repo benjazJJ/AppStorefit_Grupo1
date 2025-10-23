@@ -5,6 +5,7 @@ import android.net.Uri
 sealed class Route(val path: String){
 
     // Auth
+    data object Splash           : Route("splash")
     data object Login            : Route("login")            // Ruta para login screen
     data object Register         : Route("registro")         // Ruta para register screen
 
