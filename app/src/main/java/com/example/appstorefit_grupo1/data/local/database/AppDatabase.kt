@@ -18,8 +18,6 @@ import com.example.appstorefit_grupo1.data.local.user.UserEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-// NUEVO: imports del carrito (mantengo lo tuyo)
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
 
@@ -32,7 +30,7 @@ import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
         ProductosEntity::class,
         CarritoEntity::class
     ],
-    version = 30,                // ↑ subo por encima de 23 (compañero) y 20 (tú)
+    version = 30,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -68,7 +66,7 @@ abstract class AppDatabase : RoomDatabase() {
                 rDao.insert(RolEntity(rolId = 3L, nombreRol = "SOPORTE"))
             }
 
-            // --- Usuarios + Registro (emails normalizados en lowercase) ---
+            // --- Usuarios + Registro  ---
             suspend fun ensureUser(
                 email: String,
                 rut: String,
@@ -163,9 +161,6 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DB_NAME
                 )
-                    // Si subes versión y no quieres escribir migraciones ahora,
-                    // puedes habilitar esto en desarrollo:
-                    .fallbackToDestructiveMigration()
                     .addCallback(callback)
                     .build()
                 INSTANCE = instance

@@ -69,7 +69,7 @@ fun PerfilScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // 1) DB + Repo primero (para que el launcher los vea)
+
     val db = remember { AppDatabase.getInstance(context) }
     val repo = remember {
         UserRepository(
@@ -79,13 +79,13 @@ fun PerfilScreen(navController: NavController) {
         )
     }
 
-    // 2) Estados de usuario y foto
+    // 1) Estados de usuario y foto
     var user by remember { mutableStateOf(SessionManager.user) }
     val roleId = SessionManager.roleId
     var photoUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
 
-    // 3) Launcher de cámara
+    // 2) Launcher de cámara
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -108,7 +108,7 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // 4) Refresca datos y precarga la foto desde DB al entrar
+    // 3) Refresca datos y precarga la foto desde DB al entrar
     LaunchedEffect(Unit) {
         val email = user?.email ?: return@LaunchedEffect
         val fresh = repo.refreshSessionUserByEmail(email)
@@ -198,7 +198,7 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
-            // ── Tarjeta 2: Cámara (separada)
+            // ── Tarjeta 2: Cámara
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
@@ -238,7 +238,6 @@ fun PerfilScreen(navController: NavController) {
                     var showDialog by remember { mutableStateOf(false) }
 
                     if (photoUriString.isNullOrEmpty()) {
-                        // Solo “Tomar foto”
                         Button(
                             onClick = {
                                 val file = createTempImageFile(context)
@@ -297,7 +296,6 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
-            // ── Campos (fuera de las tarjetas)
             CampoReadOnlyDegradado(
                 etiqueta = "Correo electrónico",
                 valor = u.email,
