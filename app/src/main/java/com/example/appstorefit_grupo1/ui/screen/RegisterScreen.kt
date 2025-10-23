@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -26,6 +27,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
 
 /* ---------- VM Wrapper ---------- */
 @Composable
@@ -50,6 +54,7 @@ fun RegisterScreenVm(
         email = state.email,
         phone = state.phone,
         address = state.address,
+        birthDate = state.birthDate,
         pass = state.pass,
         confirm = state.confirm,
         rutError = state.rutError,
@@ -57,6 +62,7 @@ fun RegisterScreenVm(
         emailError = state.emailError,
         phoneError = state.phoneError,
         addressError = state.addressError,
+        birthDateError = state.birthDateError,
         passError = state.passError,
         confirmError = state.confirmError,
         canSubmit = state.canSubmit,
@@ -67,6 +73,7 @@ fun RegisterScreenVm(
         onEmailChange = vm::onRegisterEmailChange,
         onPhoneChange = vm::onPhoneChange,
         onAddressChange = vm::onAddressChange,
+        onBirthDateChange = vm::onBirthDateChange,
         onPassChange = vm::onRegisterPassChange,
         onConfirmChange = vm::onConfirmChange,
         onSubmit = vm::submitRegister,
@@ -84,6 +91,7 @@ private fun RegisterScreen(
     email: String,
     phone: String,
     address: String,
+    birthDate: String,
     pass: String,
     confirm: String,
     rutError: String?,
@@ -91,6 +99,7 @@ private fun RegisterScreen(
     emailError: String?,
     phoneError: String?,
     addressError: String?,
+    birthDateError: String?,
     passError: String?,
     confirmError: String?,
     canSubmit: Boolean,
@@ -101,6 +110,7 @@ private fun RegisterScreen(
     onEmailChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onAddressChange: (String) -> Unit,
+    onBirthDateChange: (String) -> Unit,
     onPassChange: (String) -> Unit,
     onConfirmChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -115,6 +125,10 @@ private fun RegisterScreen(
 
     var showPass by remember { mutableStateOf(false) }
     var showConfirm by remember { mutableStateOf(false) }
+
+    // estado de DatePicker
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
 
     Box(
         modifier = Modifier
@@ -176,8 +190,6 @@ private fun RegisterScreen(
                 )
                 AnimatedError(emailError ?: (if (isEmailTaken) "Correo ya registrado" else null))
 
-
-
                 /* Teléfono */
                 val isPhoneTaken = errorMsg == "Este teléfono ya pertenece a otro usuario."
                 OutlinedTextField(
@@ -191,8 +203,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(phoneError ?: (if (isPhoneTaken) "Este teléfono ya pertenece a otro usuario." else null))
 
-
-
+                /* Dirección */
                 OutlinedTextField(
                     value = address,
                     onValueChange = onAddressChange,
@@ -204,6 +215,53 @@ private fun RegisterScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 AnimatedError(addressError)
+
+                //Fecha de nacimiento
+                Box(modifier = Modifier.fillMaxWidth()) {
+
+                    OutlinedTextField(
+                        value = birthDate,
+                        onValueChange = { /* se setea sólo con el DatePicker */ },
+                        label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
+                        singleLine = true,
+                        isError = birthDateError != null,
+                        readOnly = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { showDatePicker = true }
+                    )
+                }
+
+                AnimatedError(birthDateError)
+
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val millis = datePickerState.selectedDateMillis
+                                if (millis != null) {
+                                    val formatted = java.text.SimpleDateFormat(
+                                        "yyyy-MM-dd",
+                                        java.util.Locale.US
+                                    ).format(java.util.Date(millis))
+                                    onBirthDateChange(formatted)
+                                }
+                                showDatePicker = false
+                            }) { Text("Aceptar") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+
 
                 /* Contraseña */
                 OutlinedTextField(

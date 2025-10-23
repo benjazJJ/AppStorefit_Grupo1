@@ -1,6 +1,8 @@
 package com.example.appstorefit_grupo1.domain.validation
 
+import android.os.Build
 import android.util.Patterns
+import androidx.annotation.RequiresApi
 
 
 fun validateEmail(email: String): String? {
@@ -93,3 +95,17 @@ private fun calculardv(numero: String, dvEsperado: String): Boolean {
     }
     return dvCalculado == dvEsperado
 }
+
+    fun validateBirthDate(value: String): String? {
+    if (value.isBlank()) return "Fecha de nacimiento obligatoria"
+    return try {
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        sdf.isLenient = false
+        val date = sdf.parse(value) ?: return "Formato inválido (usa yyyy-MM-dd)"
+        val today = java.util.Date()
+        if (date.after(today)) "La fecha no puede ser futura" else null
+    } catch (_: Exception) {
+        "Formato inválido (usa yyyy-MM-dd)"
+    }
+}
+

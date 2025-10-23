@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
@@ -319,6 +320,13 @@ fun PerfilScreen(navController: NavController) {
                         Icon(Icons.Filled.Edit, contentDescription = "Editar contraseña")
                     }
                 },
+                borderBrush = grad1
+            )
+
+            CampoReadOnlyDegradado(
+                etiqueta = "Fecha de Nacimiento",
+                valor = u.birthDate,
+                leadingIcon = { Icon(Icons.Filled.Cake, contentDescription = null) },
                 borderBrush = grad1
             )
 

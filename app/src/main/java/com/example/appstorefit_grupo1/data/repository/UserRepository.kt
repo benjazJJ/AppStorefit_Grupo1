@@ -45,7 +45,8 @@ class UserRepository(
         phone: String,
         pass: String,
         address: String,
-        rolId: Long = 1L
+        rolId: Long = 1L,
+        birthDate: String
     ): Result<Long> {
         val correoCanonico = emailCanonico(email)
         val passIngresada  = pass
@@ -84,7 +85,7 @@ class UserRepository(
                         phone = if (phoneCanon.isBlank()) null else phoneCanon,
                         lastName = "",
                         address = address,
-                        birthDate = ""
+                        birthDate = birthDate
                     )
                 )
                 idRegistroCreado = registroDao.insertar(

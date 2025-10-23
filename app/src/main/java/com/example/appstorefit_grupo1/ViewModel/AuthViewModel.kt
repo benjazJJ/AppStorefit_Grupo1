@@ -11,8 +11,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+
 
 private var emailCheckJob: Job? = null
 private var rutCheckJob: Job? = null
@@ -27,7 +26,9 @@ data class LoginUiState(
     val isSubmitting: Boolean = false,
     val canSubmit: Boolean = false,
     val success: Boolean = false,
-    val errorMsg: String? = null
+    val errorMsg: String? = null,
+    val birthDate: String = "",
+    val birthDateError: String? = null
 )
 
 data class RegisterUiState(
@@ -38,6 +39,8 @@ data class RegisterUiState(
     val address: String = "",
     val pass: String = "",
     val confirm: String = "",
+    val birthDate: String = "",
+
 
     val rutError: String? = null,
     val nameError: String? = null,
@@ -46,6 +49,8 @@ data class RegisterUiState(
     val addressError: String? = null,
     val passError: String? = null,
     val confirmError: String? = null,
+    val birthDateError: String? = null,
+
 
     val isSubmitting: Boolean = false,
     val canSubmit: Boolean = false,
@@ -206,6 +211,16 @@ class AuthViewModel(
         recomputeRegisterCanSubmit()
     }
 
+    fun onBirthDateChange(value: String) {
+        _register.update {
+            it.copy(
+                birthDate = value,
+                birthDateError = validateBirthDate(value)
+            )
+        }
+        recomputeRegisterCanSubmit()
+    }
+
 
     fun onAddressChange(value: String) {
         _register.update { it.copy(address = value, addressError = null) }
@@ -227,10 +242,14 @@ class AuthViewModel(
         val s = _register.value
         val noErrors = listOf(
             s.rutError, s.nameError, s.emailError, s.phoneError,
-            s.addressError, s.passError, s.confirmError
+            s.addressError, s.passError, s.confirmError, s.birthDateError
         ).all { it == null }
+
         val filled = s.rut.isNotBlank() && s.name.isNotBlank() && s.email.isNotBlank() &&
-                s.phone.isNotBlank() && s.address.isNotBlank() && s.pass.isNotBlank() && s.confirm.isNotBlank()
+                s.phone.isNotBlank() && s.address.isNotBlank() &&
+                s.pass.isNotBlank() && s.confirm.isNotBlank() &&
+                s.birthDate.isNotBlank()
+
         _register.update { it.copy(canSubmit = noErrors && filled) }
     }
 
@@ -248,7 +267,8 @@ class AuthViewModel(
                 email = s.email,
                 address = s.address,
                 phone = s.phone,
-                pass = s.pass
+                pass = s.pass,
+                birthDate = s.birthDate
             )
 
             _register.update {
