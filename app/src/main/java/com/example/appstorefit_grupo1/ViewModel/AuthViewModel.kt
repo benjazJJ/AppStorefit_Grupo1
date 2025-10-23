@@ -9,12 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
 import kotlinx.coroutines.Job
-
-// ⬇️ NUEVO: para persistir sesión tras login OK
 import com.example.appstorefit_grupo1.session.SessionManager
-
 private var emailCheckJob: Job? = null
 private var rutCheckJob: Job? = null
 private var phoneCheckJob: Job? = null

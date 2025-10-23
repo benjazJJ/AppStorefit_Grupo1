@@ -19,17 +19,43 @@ import com.example.appstorefit_grupo1.R
 import com.example.appstorefit_grupo1.ViewModel.CarritoViewModel
 import com.example.appstorefit_grupo1.ViewModel.CarritoViewModelFactory
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
+import com.example.appstorefit_grupo1.navigation.Route
+import com.example.appstorefit_grupo1.ui.components.SuccessCheckoutDialog
 import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
 fun CarritoScreen(navController: NavHostController) {
     val ctx = LocalContext.current
+
+    // Usas la misma instancia de DB para obtener el DAO
     val carritoDao = remember { AppDatabase.getInstance(ctx).carritoDao() }
-    val vm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(carritoDao))
+
+    // CORRECCIÓN: tu Factory espera (Context, CarritoDao?)
+    val vm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(ctx, carritoDao))
+
     val state by vm.uiState.collectAsStateWithLifecycle()
 
+    // Snackbar para mostrar mensajes del ViewModel
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Estado para abrir/cerrar el diálogo de “compra exitosa”
+    var mostrarDialogoExito by remember { mutableStateOf(false) }
+
+    // Escuchar eventos one-shot desde el ViewModel
+    val evento = vm.eventos.collectAsState(initial = null).value
+    LaunchedEffect(evento) {
+        evento?.let { msg ->
+            // Si el mensaje indica compra confirmada, mostramos el diálogo con la imagen
+            if (msg.startsWith("Compra confirmada")) {
+                mostrarDialogoExito = true
+            }
+            snackbarHostState.showSnackbar(message = msg)
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }, // añade el host de snackbars
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
                 Row(
@@ -44,9 +70,11 @@ fun CarritoScreen(navController: NavHostController) {
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
+
+                    // CORRECCIÓN: llamar a vm.onComprar() y habilitar solo si hay items
                     Button(
-                        onClick = { /* TODO: ir a confirmación/pago */ },
-                        enabled = state.totalCLP > 0,
+                        onClick = { vm.onComprar() },
+                        enabled = state.items.isNotEmpty(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("FINALIZAR COMPRA")
@@ -77,7 +105,7 @@ fun CarritoScreen(navController: NavHostController) {
                         talla = item.talla,
                         cantidad = item.cantidad,
                         precioUnitarioCLP = item.precioUnitario,
-                        imageRes = modeloToDrawable(item.modelo), // ajusta mapeo abajo
+                        imageRes = modeloToDrawable(item.modelo),
                         onSumar = {
                             vm.agregar(
                                 idCat = item.idCategoria,
@@ -88,12 +116,29 @@ fun CarritoScreen(navController: NavHostController) {
                                 precioUnit = item.precioUnitario
                             )
                         },
-                        onRestar = { vm.disminuir(item.idCategoria, item.idProducto, item.color, item.talla) },
-                        onEliminar = { vm.eliminar(item.idCategoria, item.idProducto, item.color, item.talla) }
+                        onRestar = {
+                            vm.disminuir(item.idCategoria, item.idProducto, item.color, item.talla)
+                        },
+                        onEliminar = {
+                            vm.eliminar(item.idCategoria, item.idProducto, item.color, item.talla)
+                        }
                     )
                 }
             }
         }
+    }
+
+    if (mostrarDialogoExito) {
+        SuccessCheckoutDialog(
+            message = "¡Compra realizada con éxito!",
+            onDismiss = {
+                mostrarDialogoExito = false
+                navController.navigate(Route.Productos.path) {
+                    popUpTo(0) { inclusive = true }  // limpia completamente el stack
+                    launchSingleTop = true
+                }
+            }
+        )
     }
 }
 
@@ -179,9 +224,7 @@ private fun CarritoItemCard(
     }
 }
 
-/** Mapea el modelo a tu drawable en res/drawable */
 private fun modeloToDrawable(modelo: String): Int = when (modelo.uppercase()) {
-    // 👇 Ajusta estos nombres al de tus PNG reales (según tus capturas)
     "XFITRX"    -> R.drawable.polerastorefit
     "WARMGLIDE" -> R.drawable.poleronstorefit
     "FLEXRUN"   -> R.drawable.buzostorefit
@@ -189,7 +232,6 @@ private fun modeloToDrawable(modelo: String): Int = when (modelo.uppercase()) {
     else        -> R.drawable.storefitlogo
 }
 
-/** 24990 -> $24.990 (Chile) */
 private fun Int.toCLP(): String {
     val f = NumberFormat.getNumberInstance(Locale("es", "CL"))
     return "$" + f.format(this)

@@ -15,6 +15,9 @@ interface CarritoDao {
     @Delete
     suspend fun delete(item: CarritoEntity): Int
 
+    @Query("SELECT * FROM carrito")
+    suspend fun getAllOnce(): List<CarritoEntity>
+
     @Query("DELETE FROM carrito")
     suspend fun clear(): Int
 
@@ -51,4 +54,6 @@ interface CarritoDao {
 
     @Query("SELECT COALESCE(SUM(cantidad * precio_unitario), 0) FROM carrito")
     fun observarTotalCLP(): Flow<Int>
+
+
 }

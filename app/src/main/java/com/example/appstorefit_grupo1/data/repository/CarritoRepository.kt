@@ -2,28 +2,33 @@ package com.example.appstorefit_grupo1.data.repository
 
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
+import com.example.appstorefit_grupo1.data.local.Productos.ProductosDao
 import kotlinx.coroutines.flow.Flow
 
-class CarritoRepository(private val dao: CarritoDao) {
+class CarritoRepository(
+    private val carritoDao: CarritoDao,
+    private val productosDao: ProductosDao
+) {
+    // Observables para la UI
+    fun observarItems(): Flow<List<CarritoEntity>> = carritoDao.observarCarrito()
+    fun observarCantidadTotal(): Flow<Int> = carritoDao.observarUnidades()
+    fun observarTotalCLP(): Flow<Int> = carritoDao.observarTotalCLP()
 
-    // --- Observables (para badge/total en vivo) ---
-    fun observarItems(): Flow<List<CarritoEntity>> = dao.observarCarrito()
-    fun observarCantidadTotal(): Flow<Int> = dao.observarUnidades()
-    fun observarTotalCLP(): Flow<Int> = dao.observarTotalCLP()
+    // Consultas puntuales
+    suspend fun getAll() = Result.success(carritoDao.getAll())
+    suspend fun countUnidades() = Result.success(carritoDao.countUnidades())
+    suspend fun totalCLP() = Result.success(carritoDao.totalCLP())
 
-    // --- Consultas simples (suspend) ---
-    suspend fun getAll(): Result<List<CarritoEntity>> = Result.success(dao.getAll())
-    suspend fun countUnidades(): Result<Int> = Result.success(dao.countUnidades())
-    suspend fun totalCLP(): Result<Int> = Result.success(dao.totalCLP())
-
-    // --- Reglas iguales a ProductosRepository ---
     private val coloresPermitidos = setOf(
         "Blanco con detalles negros",
         "Negro con detalles blancos"
     )
     private val tallasPermitidas = setOf("XS", "S", "M", "L", "XL")
 
-    /** Agrega 1 unidad de un producto+variante. Si ya existe, incrementa cantidad. */
+    /**
+     * Agrega 1 unidad de la variante indicada, validando que no supere el stock disponible.
+     * Devuelve Result.success(Unit) si agregó; Result.failure con mensaje si no.
+     */
     suspend fun agregar(
         idCategoria: Long,
         idProducto: Long,
@@ -37,9 +42,23 @@ class CarritoRepository(private val dao: CarritoDao) {
         if (talla !in tallasPermitidas) return Result.failure(IllegalArgumentException("Talla inválida"))
         if (precioUnitario < 0) return Result.failure(IllegalArgumentException("Precio inválido"))
 
-        val existente = dao.findByProductoYVariante(idCategoria, idProducto, color, talla)
+        // Cantidad actual en carrito para esta variante
+        val existente = carritoDao.findByProductoYVariante(idCategoria, idProducto, color, talla)
+        val cantidadActual = existente?.cantidad ?: 0
+
+        // Stock real del producto
+        val producto = productosDao.getByIds(idCategoria, idProducto)
+            ?: return Result.failure(IllegalStateException("Producto no encontrado"))
+        val stock = producto.stock
+
+        // No permitir superar stock
+        if (cantidadActual + 1 > stock) {
+            return Result.failure(IllegalStateException("Sin stock suficiente para $modelo ($color/$talla)"))
+        }
+
+        // Insertar o incrementar
         if (existente == null) {
-            dao.insert(
+            carritoDao.insert(
                 CarritoEntity(
                     idCategoria = idCategoria,
                     idProducto = idProducto,
@@ -51,42 +70,42 @@ class CarritoRepository(private val dao: CarritoDao) {
                 )
             )
         } else {
-            dao.update(existente.copy(cantidad = existente.cantidad + 1))
+            carritoDao.update(existente.copy(cantidad = cantidadActual + 1))
         }
         return Result.success(Unit)
     }
 
-    /** Disminuye 1 unidad; si queda en 0, elimina el ítem. */
+    /** Disminuye 1 unidad; si queda 0, elimina la variante. */
     suspend fun disminuir(
         idCategoria: Long,
         idProducto: Long,
         color: String,
         talla: String
     ): Result<Unit> {
-        val it = dao.findByProductoYVariante(idCategoria, idProducto, color, talla)
+        val it = carritoDao.findByProductoYVariante(idCategoria, idProducto, color, talla)
             ?: return Result.failure(IllegalArgumentException("Ítem no encontrado"))
         val nueva = it.cantidad - 1
-        if (nueva <= 0) dao.delete(it) else dao.update(it.copy(cantidad = nueva))
+        if (nueva <= 0) carritoDao.delete(it) else carritoDao.update(it.copy(cantidad = nueva))
         return Result.success(Unit)
     }
 
-    /** Elimina el ítem completo (todas sus unidades). */
+    /** Elimina completamente la variante. */
     suspend fun eliminar(
         idCategoria: Long,
         idProducto: Long,
         color: String,
         talla: String
     ): Result<Boolean> {
-        val it = dao.findByProductoYVariante(idCategoria, idProducto, color, talla)
+        val it = carritoDao.findByProductoYVariante(idCategoria, idProducto, color, talla)
             ?: return Result.failure(IllegalArgumentException("Ítem no encontrado"))
-        val rows = dao.delete(it)
+        val rows = carritoDao.delete(it)
         return if (rows > 0) Result.success(true)
         else Result.failure(IllegalStateException("No se pudo eliminar"))
     }
 
     /** Vacía el carrito. */
     suspend fun limpiar(): Result<Unit> {
-        dao.clear()
+        carritoDao.clear()
         return Result.success(Unit)
     }
 }
