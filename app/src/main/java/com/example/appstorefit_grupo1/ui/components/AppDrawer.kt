@@ -1,6 +1,5 @@
-package com.example.appstorefit_grupo1.components
+package com.example.appstorefit_grupo1.ui.components
 
-import android.graphics.drawable.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Home

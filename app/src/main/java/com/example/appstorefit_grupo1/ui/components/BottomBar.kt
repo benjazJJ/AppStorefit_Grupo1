@@ -1,4 +1,4 @@
-package com.example.appstorefit_grupo1.components
+package com.example.appstorefit_grupo1.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home

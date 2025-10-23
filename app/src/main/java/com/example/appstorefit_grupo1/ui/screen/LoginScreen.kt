@@ -33,7 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
-import com.example.appstorefit_grupo1.components.SuccessLoginDialog
+import com.example.appstorefit_grupo1.ui.components.SuccessLoginDialog
 
 @Composable
 fun LoginScreenVm(

@@ -1,4 +1,4 @@
-package com.example.appstorefit_grupo1.components
+package com.example.appstorefit_grupo1.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

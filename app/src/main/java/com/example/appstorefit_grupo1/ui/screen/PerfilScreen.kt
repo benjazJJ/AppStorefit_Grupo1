@@ -33,7 +33,7 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.appstorefit_grupo1.components.CampoReadOnlyDegradado
+import com.example.appstorefit_grupo1.ui.components.CampoReadOnlyDegradado
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 import com.example.appstorefit_grupo1.navigation.Route
