@@ -26,7 +26,6 @@ import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
 
-// ➜ Incluye idCategoria y modelo para poder ir al detalle
 data class Producto(
     val id: String,
     val idCategoria: Long,
@@ -41,7 +40,6 @@ data class Producto(
 fun ProductosScreen(
     widthClass: WindowWidthSizeClass,
     nav: NavController,
-    // Se mantiene por compatibilidad si lo usabas en previews o llamados anteriores (no se usa ya)
     onAddToCart: (Producto) -> Unit = { },
     onOpenDetalle: (Long, String) -> Unit = { idCategoria, modelo ->
         nav.navigate(Route.DetalleProducto.create(idCategoria, modelo))
@@ -60,7 +58,6 @@ fun ProductosScreen(
         }
     }
 
-    // ➜ Solo tus 4 categorías, con modelo por categoría (coincide con el seed)
     val productos = remember {
         listOf(
             Producto("1", idCategoria = 1L, modelo = "XFITRX",    nombre = "Polera StoreFit (XFITRX)",     precio = 9_990,  imagenRes = R.drawable.polerastorefit),
@@ -114,7 +111,6 @@ fun ProductosScreen(
 
                         Spacer(Modifier.height(10.dp))
 
-                        // 👉 Solo queda el botón Detalle
                         OutlinedButton(
                             onClick = { onOpenDetalle(p.idCategoria, p.modelo) },
                             modifier = Modifier.fillMaxWidth(),
@@ -128,23 +124,4 @@ fun ProductosScreen(
             }
         }
     }
-}
-
-/* ===== Previews (solo IDE) ===== */
-@Preview(name = "Productos – Compacta", widthDp = 360, heightDp = 800, showSystemUi = true)
-@Composable
-private fun PreviewProductosCompact() {
-    ProductosScreen(
-        widthClass = WindowWidthSizeClass.Compact,
-        nav = rememberNavController()
-    )
-}
-
-@Preview(name = "Productos – Expandida", widthDp = 1000, heightDp = 800, showSystemUi = true)
-@Composable
-private fun PreviewProductosExpanded() {
-    ProductosScreen(
-        widthClass = WindowWidthSizeClass.Expanded,
-        nav = rememberNavController()
-    )
 }

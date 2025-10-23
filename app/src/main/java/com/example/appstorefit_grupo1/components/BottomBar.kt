@@ -1,6 +1,7 @@
 package com.example.appstorefit_grupo1.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -12,8 +13,6 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.appstorefit_grupo1.navigation.Route
-
-// NUEVO: imports para VM del carrito
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,7 +22,6 @@ import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 
 @Composable
 fun BottomBar(navController: NavController) {
-    // Tabs visibles en la barra inferior (sin Home)
     val items = listOf(
         Route.Productos,
         Route.Carrito,
@@ -33,7 +31,7 @@ fun BottomBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // NUEVO: VM del carrito para mostrar badge
+
     val ctx = LocalContext.current
     val carritoDao = remember { AppDatabase.getInstance(ctx).carritoDao() }
     val carritoVm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(carritoDao))
@@ -58,7 +56,7 @@ fun BottomBar(navController: NavController) {
                 },
                 icon = {
                     when (route) {
-                        Route.Productos -> Icon(Icons.Filled.List, contentDescription = "Productos")
+                        Route.Productos -> Icon(Icons.Filled.Home, contentDescription = "Productos")
                         Route.Carrito -> {
                             BadgedBox(
                                 badge = {

@@ -74,7 +74,8 @@ abstract class AppDatabase : RoomDatabase() {
                 rut: String,
                 nombre: String,
                 pass: String,
-                rolId: Long
+                rolId: Long,
+                telefono: String
             ) {
                 val e = email.trim().lowercase()
                 if (regDao.getByUsuario(e) == null) {
@@ -84,8 +85,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 rut = rut,
                                 name = nombre,
                                 email = e,
-                                // Mantengo tu teléfono por defecto (no elimino nada tuyo)
-                                phone = "12345678",
+                                phone = telefono,
                                 lastName = "",
                                 address = "",
                                 birthDate = ""
@@ -103,8 +103,8 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
-            ensureUser("a@a.cl", "11.111.111-1", "Admin", "Admin123!", 2L)
-            ensureUser("b@b.cl", "22.222.222-2", "Jose",  "Jose123!",  1L)
+            ensureUser("a@a.cl", "11.111.111-1", "Admin", "Admin123!", 2L, telefono = "941827012")
+            ensureUser("b@b.cl", "22.222.222-2", "Jose",  "Jose123!",  1L, telefono = "941827013")
 
             // --- Categorías ---
             if (kotlin.runCatching { cDao.count() }.getOrDefault(0) == 0) {
@@ -165,7 +165,7 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                     // Si subes versión y no quieres escribir migraciones ahora,
                     // puedes habilitar esto en desarrollo:
-                    //.fallbackToDestructiveMigration(false)
+                    .fallbackToDestructiveMigration()
                     .addCallback(callback)
                     .build()
                 INSTANCE = instance
