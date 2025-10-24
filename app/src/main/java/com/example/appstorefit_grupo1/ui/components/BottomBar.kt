@@ -34,7 +34,7 @@ fun BottomBar(navController: NavController) {
 
     val ctx = LocalContext.current
     val carritoDao = remember { AppDatabase.getInstance(ctx).carritoDao() }
-    val carritoVm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(carritoDao))
+    val carritoVm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(ctx,carritoDao = carritoDao))
     val ui by carritoVm.uiState.collectAsStateWithLifecycle()
 
     NavigationBar {

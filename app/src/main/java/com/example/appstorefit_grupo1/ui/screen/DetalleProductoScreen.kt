@@ -23,11 +23,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.appstorefit_grupo1.R
+import com.example.appstorefit_grupo1.ViewModel.CarritoViewModel
+import com.example.appstorefit_grupo1.ViewModel.CarritoViewModelFactory
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.ProductosRepository
+import com.example.appstorefit_grupo1.ui.components.AddToCartDialog
 import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
@@ -38,11 +42,34 @@ fun DetalleProductoScreen(
     navController: NavHostController,
     idCategoria: Long,
     modelo: String,
-    onAddToCart: (ProductosEntity) -> Unit = {},
 ) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getInstance(context) }
     val repo = remember { ProductosRepository(db.productosDao()) }
+
+    // ViewModel del carrito para agregar directamente
+    val carritoVm: CarritoViewModel =
+        viewModel(factory = CarritoViewModelFactory(context, db.carritoDao()))
+
+    // Snackbar para mostrar mensajes (p. ej., “Sin stock suficiente”)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Flag para mostrar la animación de “añadido”
+    var mostrarAnimAdd by remember { mutableStateOf(false) }
+
+    // Escucha de eventos del VM (éxito/error al agregar)
+    val evento = carritoVm.eventos.collectAsState(initial = null).value
+    LaunchedEffect(evento) {
+        evento?.let { msg ->
+            if (msg == "Agregado al carrito") {
+                // Éxito: animación
+                mostrarAnimAdd = true
+            } else {
+                // Otros mensajes: Snackbar (errores de stock, etc.)
+                snackbarHostState.showSnackbar(message = msg)
+            }
+        }
+    }
 
     var variantes by remember { mutableStateOf<List<ProductosEntity>>(emptyList()) }
     var selectedTalla by remember { mutableStateOf<String?>(null) }
@@ -93,14 +120,12 @@ fun DetalleProductoScreen(
                 title = { Text("Detalle producto") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Volver"
-                        )
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) } // mensajes del VM
     ) { inner ->
         Column(
             modifier = Modifier
@@ -121,7 +146,7 @@ fun DetalleProductoScreen(
                 contentScale = ContentScale.Crop
             )
 
-            // Selector de color bajo la foto
+            // Selector de color
             Column {
                 Text("Color", fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -142,7 +167,6 @@ fun DetalleProductoScreen(
 
             // Info + tallas
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Título con categoría + modelo
                 Text(
                     text = "${tituloPorCategoria(idCategoria)}  –  $modelo",
                     style = MaterialTheme.typography.headlineSmall,
@@ -180,9 +204,19 @@ fun DetalleProductoScreen(
                     color = if (stock > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
                 )
 
-                // Botones
+                // Botón: agrega al carrito con el VM
                 Button(
-                    onClick = { varianteSeleccionada?.let(onAddToCart) },
+                    onClick = {
+                        val p = varianteSeleccionada ?: return@Button
+                        carritoVm.agregar(
+                            idCat = p.idCategoria,
+                            idProd = p.idProducto,
+                            modelo = p.modelo,
+                            color = selectedColor!!,
+                            talla = selectedTalla!!,
+                            precioUnit = p.precio
+                        )
+                    },
                     enabled = (selectedTalla != null && selectedColor != null && varianteSeleccionada != null && stock > 0),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Añadir al carrito") }
@@ -193,6 +227,14 @@ fun DetalleProductoScreen(
                 ) { Text("← Volver a productos") }
             }
         }
+    }
+
+    // Diálogo con animación Lottie de “Agregado al carrito”
+    if (mostrarAnimAdd) {
+        AddToCartDialog(
+            message = "Producto añadido al carrito",
+            onDismiss = { mostrarAnimAdd = false }
+        )
     }
 }
 
