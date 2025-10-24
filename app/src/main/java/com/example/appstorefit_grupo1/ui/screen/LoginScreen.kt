@@ -33,17 +33,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
+import com.example.appstorefit_grupo1.session.SessionManager
 import com.example.appstorefit_grupo1.ui.components.SuccessLoginDialog
 
 @Composable
 fun LoginScreenVm(
     widthClass: WindowWidthSizeClass,
-    onLoginOkNavigateHome: () -> Unit,
+    onLoginOkNavigateHome: () -> Unit,      // Productos
+    onLoginOkNavigateAdmin: () -> Unit,     // Panel
     onGoRegister: () -> Unit
 ) {
     val context = LocalContext.current
     val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
-
     val state by vm.login.collectAsStateWithLifecycle()
 
     // Mostrar diálogo de éxito y navegar al cerrarse
@@ -52,7 +53,8 @@ fun LoginScreenVm(
             message = "¡Sesión iniciada exitosamente!",
             onDismiss = {
                 vm.clearLoginResult()
-                onLoginOkNavigateHome()
+                val isAdmin = (SessionManager.roleId == 2L)
+                if (isAdmin) onLoginOkNavigateAdmin() else onLoginOkNavigateHome()
             }
         )
     }

@@ -48,8 +48,14 @@ fun EditarContrasenaScreen(
     val buttonShape = RoundedCornerShape(24.dp)
 
     val ctx = LocalContext.current
-    val db  = remember { AppDatabase.getInstance(ctx) }
-    val repo = remember { UserRepository(db = db, userDao = db.userDao(), registroDao = db.registroDao()) }
+    val db   = remember { AppDatabase.getInstance(context = ctx) }
+    val repo = remember {
+        UserRepository(
+            db          = db,
+            userDao     = db.userDao(),
+            registroDao = db.registroDao(),
+            rolDao      = db.rolDao())
+    }
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
 

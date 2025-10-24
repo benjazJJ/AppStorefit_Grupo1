@@ -21,8 +21,13 @@ fun SplashScreen(navController: NavController) {
         // Restaura sesión desde DataStore
         SessionManager.restoreFromStore(context)
 
-        // Decide destino y limpia back stack
-        val target = if (SessionManager.user != null) Route.Productos.path else Route.Login.path
+        // Decide destino según rol y limpia back stack
+        val target = when {
+            SessionManager.user == null -> Route.Login.path
+            SessionManager.roleId == 2L -> Route.Panel.path   // Admin → Panel
+            else                        -> Route.Productos.path
+        }
+
         navController.navigate(target) {
             popUpTo(0) { inclusive = true }
             launchSingleTop = true

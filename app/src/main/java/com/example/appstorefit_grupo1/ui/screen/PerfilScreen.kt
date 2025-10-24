@@ -77,7 +77,8 @@ fun PerfilScreen(navController: NavController) {
         UserRepository(
             db = db,
             userDao = db.userDao(),
-            registroDao = db.registroDao()
+            registroDao = db.registroDao(),
+            rolDao = db.rolDao()
         )
     }
 

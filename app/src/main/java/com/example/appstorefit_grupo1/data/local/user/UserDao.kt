@@ -36,10 +36,31 @@ interface UserDao {
     @Update
     suspend fun actualizar(user: UserEntity): Int
 
-    // ------- NUEVO: foto de perfil -------
     @Query("UPDATE usuarios SET foto_uri = :uri WHERE correo_electronico = :email")
     suspend fun updatePhotoByEmail(email: String, uri: String?): Int
 
     @Query("SELECT foto_uri FROM usuarios WHERE correo_electronico = :email LIMIT 1")
     suspend fun getPhotoUriByEmail(email: String): String?
+
+    /* ---------- MÉTODOS PARA PANEL ADMIN ---------- */
+
+    @Query("""
+        SELECT 
+            u.rut                    AS rut,
+            u.nombre                 AS name,
+            u.correo_electronico     AS email,
+            u.telefono               AS phone,
+            u.direccion              AS address,
+            r.rol_id                 AS roleId,
+            rl.nombre_rol                AS roleName
+        FROM usuarios u
+        LEFT JOIN registro r ON r.rut = u.rut
+        LEFT JOIN rol rl      ON rl.rol_id = r.rol_id
+        ORDER BY u.nombre COLLATE NOCASE ASC
+    """)
+    suspend fun adminListUsers(): List<AdminUserRow>
+
+    // Eliminar usuario por RUT
+    @Query("DELETE FROM usuarios WHERE rut = :rut")
+    suspend fun deleteByRut(rut: String): Int
 }

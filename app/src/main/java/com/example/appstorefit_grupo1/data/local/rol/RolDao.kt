@@ -31,4 +31,8 @@ interface RolDao {
     @Query("SELECT COUNT(*) FROM rol")
     suspend fun count(): Int
 
+    @Query("SELECT rol_id, nombre_rol FROM rol ORDER BY nombre_rol")
+    suspend fun adminListRoles(): List<com.example.appstorefit_grupo1.data.local.rol.AdminRoleRow>
+
+
 }

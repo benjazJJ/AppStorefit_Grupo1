@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -26,6 +27,7 @@ import androidx.navigation.compose.composable
 import com.example.appstorefit_grupo1.ui.screen.*
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.example.appstorefit_grupo1.session.SessionManager
 
 private data class TopDest(
     val route: String,
@@ -33,12 +35,21 @@ private data class TopDest(
     val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
-// Bottom/Rail: Productos, Carrito, Perfil
-private val TOP_DESTINATIONS = listOf(
-    TopDest(Route.Productos.path, "Productos", Icons.Filled.ShoppingCart),
-    TopDest(Route.Carrito.path,   "Carrito",   Icons.Filled.ShoppingCart),
-    TopDest(Route.Perfil.path,    "Perfil",    Icons.Filled.Person)
-)
+//construimos el menú según el rol
+private fun topDestinationsFor(roleId: Long?): List<TopDest> {
+    val common = listOf(
+        TopDest(Route.Productos.path, "Productos", Icons.Filled.ShoppingCart),
+        TopDest(Route.Carrito.path,   "Carrito",   Icons.Filled.ShoppingCart),
+        TopDest(Route.Perfil.path,    "Perfil",    Icons.Filled.Person)
+    )
+    return if (roleId == 2L) { // 2L = ADMIN (ajusta si tu BD usa otro id)
+        listOf(
+            TopDest(Route.Panel.path, "Panel", Icons.Filled.Person) // puedes cambiar el ícono si prefieres
+        ) + common
+    } else {
+        common
+    }
+}
 
 @Composable
 fun AppNavGraph(
@@ -47,6 +58,10 @@ fun AppNavGraph(
 ) {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+
+    //obtenemos rol y generamos el menú
+    val roleId = SessionManager.roleId
+    val TOP_DESTINATIONS = remember(roleId) { topDestinationsFor(roleId) }
 
     fun navigateTopLevel(toRoute: String) {
         if (toRoute == currentRoute) return
@@ -87,6 +102,7 @@ fun AppNavGraph(
         else -> {
             Scaffold(
                 bottomBar = {
+                    // mostramos la barra si estamos en alguna top-dest (dinámica) o en detalle de producto
                     if (TOP_DESTINATIONS.any { currentRoute?.startsWith(it.route) == true } ||
                         currentRoute?.startsWith(Route.DetalleProducto.path) == true) {
                         NavigationBar {
@@ -124,14 +140,13 @@ private fun GraphHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Route.Splash.path      // ⬅️ antes era Login
+        startDestination = Route.Splash.path
     ) {
-        // ⬇️ NUEVO
         composable(Route.Splash.path) {
             SplashScreen(navController)
         }
 
-        // Login -> Productos
+        // Login -> Productos / Panel si es admin)
         composable(Route.Login.path) {
             LoginScreenVm(
                 widthClass = widthClass,
@@ -142,9 +157,17 @@ private fun GraphHost(
                         restoreState = true
                     }
                 },
+                onLoginOkNavigateAdmin = {  // NUEVO
+                    navController.navigate(Route.Panel.path) {
+                        popUpTo(Route.Login.path) { inclusive = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 onGoRegister = { navController.navigate(Route.Register.path) }
             )
         }
+
 
         // Register
         composable(Route.Register.path) {
@@ -161,7 +184,7 @@ private fun GraphHost(
             )
         }
 
-        // Productos (inicio real tras login)
+        // Productos (inicio real tras login normal)
         composable(Route.Productos.path) {
             ProductosScreen(widthClass = widthClass, nav = navController)
         }
@@ -176,8 +199,23 @@ private fun GraphHost(
             PerfilScreen(navController = navController)
         }
 
+        // Editar contraseña
         composable(Route.EditarContrasena.path) {
             EditarContrasenaScreen(navController = navController)
+        }
+
+        //Panel (solo admin)
+        composable(Route.Panel.path) {
+            val roleId = SessionManager.roleId
+            if (roleId == 2L) {
+                AdminScreen(navController = navController)
+            } else {
+                //si no es admin, volver a productos
+                navController.popBackStack()
+                navController.navigate(Route.Productos.path) {
+                    launchSingleTop = true
+                }
+            }
         }
 
         // Detalle de producto
