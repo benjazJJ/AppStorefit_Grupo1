@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RolDao {
-    @Query("SELECT * FROM rol ORDER BY nombre_rol")
+    @Query("SELECT * FROM rol ORDER BY nombre_rol COLLATE NOCASE")
     fun getAll(): Flow<List<RolEntity>>
 
     @Query("SELECT * FROM rol WHERE rol_id = :id LIMIT 1")
@@ -31,8 +31,13 @@ interface RolDao {
     @Query("SELECT COUNT(*) FROM rol")
     suspend fun count(): Int
 
-    @Query("SELECT rol_id, nombre_rol FROM rol ORDER BY nombre_rol")
-    suspend fun adminListRoles(): List<com.example.appstorefit_grupo1.data.local.rol.AdminRoleRow>
-
-
+    // Usado por el VM (Admin)
+    @Query("""
+        SELECT 
+            rol_id AS id, 
+            nombre_rol AS name
+        FROM rol 
+        ORDER BY nombre_rol COLLATE NOCASE
+    """)
+    suspend fun adminListRoles(): List<AdminRoleRow>
 }

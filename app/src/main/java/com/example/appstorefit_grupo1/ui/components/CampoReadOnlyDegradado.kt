@@ -1,12 +1,17 @@
 package com.example.appstorefit_grupo1.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -21,46 +26,53 @@ import androidx.compose.ui.unit.dp
 fun CampoReadOnlyDegradado(
     etiqueta: String,
     valor: String,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
     borderBrush: Brush,
-    shape: RoundedCornerShape = RoundedCornerShape(12.dp)
+    innerPadding: PaddingValues = PaddingValues(8.dp)
 ) {
-    Column (Modifier.fillMaxWidth()) {
-        Text(
-            text = etiqueta,
-            color = Color.Black,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp)
-                .border(2.dp, borderBrush, shape)
-                .background(Color.White, shape)
-                .padding(horizontal = 12.dp, vertical = 2.dp)
-        ) {
-            TextField(
-                value = valor,
-                onValueChange = {},
-                readOnly = true,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = leadingIcon,
-                trailingIcon = trailingIcon,
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    disabledContainerColor = Color.White,
-                    cursorColor = Color.Black,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                )
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(12.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(BorderStroke(1.dp, borderBrush), shape = shape)
+            .padding(innerPadding)
+    ) {
+        OutlinedTextField(
+            value = valor,
+            onValueChange = { /* read-only */ },
+            readOnly = true,
+            enabled = false,
+            singleLine = true,
+            label = { Text(text = etiqueta) },
+            leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            colors = OutlinedTextFieldDefaults.colors(
+                // Contenedor
+                disabledContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+
+                // Texto y label
+                disabledTextColor = cs.onSurface,
+                disabledLabelColor = cs.onSurfaceVariant,
+                focusedLabelColor = cs.onSurfaceVariant,
+                unfocusedLabelColor = cs.onSurfaceVariant,
+                disabledPlaceholderColor = cs.onSurfaceVariant,
+
+                // Íconos
+                disabledLeadingIconColor = cs.onSurfaceVariant,
+                disabledTrailingIconColor = cs.onSurfaceVariant,
+
+                // Bordes del OutlinedTextField
+                disabledBorderColor = Color.Transparent,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
             )
-        }
+        )
     }
 }

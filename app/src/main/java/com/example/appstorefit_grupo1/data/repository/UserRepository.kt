@@ -177,7 +177,7 @@ class UserRepository(
         return fresh
     }
 
-    //FOTO DE PERFIL
+    // FOTO DE PERFIL
     suspend fun saveUserPhoto(email: String, uri: String): Result<Unit> {
         val canon = emailCanonico(email)
         if (canon.isBlank() || uri.isBlank()) return Result.failure(IllegalArgumentException("Datos inválidos"))
@@ -201,7 +201,7 @@ class UserRepository(
     suspend fun getUserPhoto(email: String): String? =
         userDao.getPhotoUriByEmail(emailCanonico(email))
 
-    // ADMIN – Usuarios
+    //ADMIN – Usuarios
     suspend fun adminListUsers(): Result<List<AdminUserRow>> = runCatching {
         userDao.adminListUsers()
     }
@@ -231,7 +231,7 @@ class UserRepository(
                 RegistroEntity(
                     rolId = roleId,
                     usuario = correoCanon,
-                    contrasenia = password,
+                    contrasenia = password, // el VM envía "" (sin contraseña temporal en UI)
                     rut = user.rut,
                     address = user.address
                 )
@@ -240,7 +240,15 @@ class UserRepository(
     }
 
     suspend fun adminUpdateUser(user: UserEntity): Result<Unit> = runCatching {
-        val rows = userDao.actualizar(user)
+        // Update PARCIAL: nombre, email, teléfono (NO toca dirección ni nacimiento)
+        val correoCanon = emailCanonico(user.email)
+        val phoneCanon  = user.phone?.filter { it.isDigit() }
+        val rows = userDao.adminUpdateEditable(
+            rut = user.rut,
+            nombre = user.name,
+            email = correoCanon,
+            telefono = if (phoneCanon.isNullOrBlank()) null else phoneCanon
+        )
         if (rows <= 0) error("No se pudo actualizar")
     }
 
@@ -248,12 +256,11 @@ class UserRepository(
         userDao.getByRut(rut) ?: error("Usuario no encontrado")
     }
 
-    //DMIN – Roles
+    // ADMIN – Roles
     suspend fun adminListRoles() = runCatching {
         rolDao.adminListRoles()
     }
 
-    //Asignar rol
     suspend fun adminAssignRoleToUser(rut: String, roleId: Long) = runCatching {
         val rows = registroDao.updateRoleByRut(rut, roleId)
         require(rows > 0) { "No se pudo actualizar el rol" }

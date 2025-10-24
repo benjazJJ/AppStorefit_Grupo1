@@ -1,9 +1,12 @@
+
 package com.example.appstorefit_grupo1.ui.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Category
@@ -11,17 +14,47 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosUiState
 import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosViewModel
 import com.example.appstorefit_grupo1.ViewModel.AdminsUsersViewModelFactory
 
@@ -64,15 +97,16 @@ fun AdminScreen(navController: NavController) {
                         NavigationBarItem(
                             selected = selected,
                             onClick = { selectedTab = tab },
-                            icon = { Icon(icon, label, tint = Color.Black) },
-                            label = { Text(label, color = Color.Black) },
+                            icon = { Icon(icon, contentDescription = label) },
+                            label = { Text(label) },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.Black,
-                                selectedTextColor = Color.Black,
-                                unselectedIconColor = Color.Black,
-                                unselectedTextColor = Color.Black,
-                                indicatorColor = cs.surface
+                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                selectedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer
                             )
+
                         )
                     }
                 }
@@ -152,7 +186,7 @@ private fun AdminUsuariosTab() {
                                     IconButton(onClick = { vm.abrirEditar(row.rut) }) {
                                         Icon(Icons.Filled.Edit, contentDescription = "Editar")
                                     }
-                                    // ASIGNAR ROL (habilitado)
+                                    // ASIGNAR ROL
                                     IconButton(onClick = { vm.abrirAsignarRol(row.rut) }) {
                                         Icon(Icons.Filled.Badge, contentDescription = "Asignar rol")
                                     }
@@ -169,7 +203,7 @@ private fun AdminUsuariosTab() {
         }
     }
 
-    //Confirmación eliminar
+    // Confirmación eliminar
     estado.rutAConfirmarEliminacion?.let { rutToDelete ->
         AlertDialog(
             onDismissRequest = { vm.cancelarEliminar() },
@@ -180,12 +214,15 @@ private fun AdminUsuariosTab() {
         )
     }
 
-    //Editar usuario
+    // Editar usuario (fecha de nacimiento y dirección bloqueadas por política)
     if (estado.mostrarEditar) {
         AlertDialog(
             onDismissRequest = { vm.cerrarEditar() },
             confirmButton = {
-                TextButton(onClick = { vm.confirmarEditar() }, enabled = estado.puedeEditar && !estado.editando) {
+                TextButton(
+                    onClick = { vm.confirmarEditar() },
+                    enabled = estado.puedeEditar && !estado.editando
+                ) {
                     if (estado.editando) {
                         CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
@@ -203,7 +240,8 @@ private fun AdminUsuariosTab() {
                         onValueChange = { /* no editable */ },
                         label = { Text("RUT") },
                         singleLine = true,
-                        enabled = false
+                        enabled = false,
+                        readOnly = true
                     )
 
                     OutlinedTextField(
@@ -213,7 +251,9 @@ private fun AdminUsuariosTab() {
                         isError = estado.errNombre2 != null,
                         singleLine = true
                     )
-                    estado.errNombre2?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+                    estado.errNombre2?.let {
+                        Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                    }
 
                     OutlinedTextField(
                         value = estado.eTelefono2,
@@ -222,29 +262,34 @@ private fun AdminUsuariosTab() {
                         isError = estado.errTelefono2 != null,
                         singleLine = true
                     )
-                    estado.errTelefono2?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+                    estado.errTelefono2?.let {
+                        Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                    }
 
+                    // BLOQUEADOS POR POLÍTICA
                     OutlinedTextField(
                         value = estado.eDireccion2,
-                        onValueChange = vm::onCambiarDireccionEditar,
-                        label = { Text("Dirección (opcional)") },
-                        singleLine = true
+                        onValueChange = { /* nada */ },
+                        label = { Text("Dirección (no editable)") },
+                        singleLine = true,
+                        enabled = false,
+                        readOnly = true
                     )
 
                     OutlinedTextField(
                         value = estado.eNacimiento2,
-                        onValueChange = vm::onCambiarNacimientoEditar,
-                        label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
-                        isError = estado.errNacimiento2 != null,
-                        singleLine = true
+                        onValueChange = { /* nada */ },
+                        label = { Text("Fecha de nacimiento (no editable)") },
+                        singleLine = true,
+                        enabled = false,
+                        readOnly = true
                     )
-                    estado.errNacimiento2?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
                 }
             }
         )
     }
 
-    //Asignar rol
+    // Asignar rol
     if (estado.mostrarAsignarRol) {
         var expanded by remember { mutableStateOf(false) }
         val roles = estado.rolesDisponibles
@@ -272,7 +317,6 @@ private fun AdminUsuariosTab() {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("RUT: ${estado.rutParaAsignar}")
 
-                    // Dropdown de roles (Exposed)
                     ExposedDropdownMenuBox(
                         expanded = expanded,
                         onExpandedChange = { expanded = !expanded }
@@ -304,9 +348,14 @@ private fun AdminUsuariosTab() {
             }
         )
     }
+
+    // Crear usuario (UI)
+    if (estado.mostrarCrear) {
+        CrearUsuarioDialog(estado = estado, vm = vm)
+    }
 }
 
-//OTRAS TABS (placeholders)
+// ========== OTRAS TABS (placeholders) ==========
 
 @Composable
 private fun AdminProductosTab() {
@@ -413,4 +462,144 @@ private fun EmptyState(message: String) {
     ) {
         Text(text = message, style = MaterialTheme.typography.bodyMedium)
     }
+}
+
+//CREAR USUARIO (UI)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CrearUsuarioDialog(
+    estado: AdminUsuariosUiState,
+    vm: AdminUsuariosViewModel
+) {
+    val cs = MaterialTheme.colorScheme
+    var rolesExpanded by remember { mutableStateOf(false) }
+    val roles = estado.rolesDisponibles
+
+    AlertDialog(
+        onDismissRequest = { vm.cerrarCrear() },
+        confirmButton = {
+            TextButton(
+                onClick = { vm.confirmarCrear() },
+                enabled = estado.puedeCrear && !estado.creando
+            ) {
+                if (estado.creando) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text("Crear")
+            }
+        },
+        dismissButton = { TextButton(onClick = { vm.cerrarCrear() }) { Text("Cancelar") } },
+        title = { Text("Crear usuario") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                OutlinedTextField(
+                    value = estado.cRut,
+                    onValueChange = vm::onCambiarRutCrear,
+                    label = { Text("RUT") },
+                    singleLine = true,
+                    isError = estado.errRut != null
+                )
+                estado.errRut?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+                OutlinedTextField(
+                    value = estado.cNombre,
+                    onValueChange = vm::onCambiarNombreCrear,
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    isError = estado.errNombre != null
+                )
+                estado.errNombre?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+                OutlinedTextField(
+                    value = estado.cEmail,
+                    onValueChange = vm::onCambiarEmailCrear,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    isError = estado.errEmail != null
+                )
+                estado.errEmail?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+                // Contraseña
+                var mostrarPass by remember { mutableStateOf(false) }
+                OutlinedTextField(
+                    value = estado.cPassword,
+                    onValueChange = vm::onCambiarPasswordCrear,
+                    label = { Text("Contraseña") },
+                    singleLine = true,
+                    isError = estado.errPassword != null,
+                    visualTransformation = if (mostrarPass) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { mostrarPass = !mostrarPass }) {
+                            Icon(
+                                imageVector = if (mostrarPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                )
+                estado.errPassword?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+
+
+                OutlinedTextField(
+                    value = estado.cTelefono,
+                    onValueChange = vm::onCambiarTelefonoCrear,
+                    label = { Text("Teléfono (opcional)") },
+                    singleLine = true,
+                    isError = estado.errTelefono != null
+                )
+                estado.errTelefono?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+                OutlinedTextField(
+                    value = estado.cDireccion,
+                    onValueChange = vm::onCambiarDireccionCrear,
+                    label = { Text("Dirección (opcional)") },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = estado.cNacimiento,
+                    onValueChange = vm::onCambiarNacimientoCrear,
+                    label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
+                    singleLine = true,
+                    isError = estado.errNacimiento != null
+                )
+                estado.errNacimiento?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+                // Rol
+                ExposedDropdownMenuBox(
+                    expanded = rolesExpanded,
+                    onExpandedChange = { rolesExpanded = !rolesExpanded }
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier.menuAnchor(),
+                        value = estado.cRolNombreSeleccionado ?: "",
+                        onValueChange = { /* solo via dropdown */ },
+                        readOnly = true,
+                        label = { Text("Rol") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rolesExpanded) },
+                        isError = estado.errRol != null
+                    )
+                    ExposedDropdownMenu(
+                        expanded = rolesExpanded,
+                        onDismissRequest = { rolesExpanded = false }
+                    ) {
+                        roles.forEach { rol ->
+                            DropdownMenuItem(
+                                text = { Text(rol.name) },
+                                onClick = {
+                                    vm.onSeleccionarRolCrear(rol.id, rol.name)
+                                    rolesExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                estado.errRol?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+            }
+        }
+    )
 }

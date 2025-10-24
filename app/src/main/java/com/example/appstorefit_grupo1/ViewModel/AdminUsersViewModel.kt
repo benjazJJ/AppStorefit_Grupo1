@@ -29,25 +29,32 @@ data class AdminUsuariosUiState(
     val rolSeleccionadoId: Long? = null,
     val asignandoRol: Boolean = false,
 
-    // Crear usuario
+    // Crear usuario (UI)
     val mostrarCrear: Boolean = false,
+    val creando: Boolean = false,
+    val puedeCrear: Boolean = false,
+
     val cRut: String = "",
     val cNombre: String = "",
     val cEmail: String = "",
     val cTelefono: String = "",
     val cDireccion: String = "",
-    val cContrasena: String = "",
-    val cRolId: Long = 1L,
+    val cNacimiento: String = "",
+    val cPassword: String = "",
+
+
+    val cRolId: Long? = null,
+    val cRolNombreSeleccionado: String? = null,
 
     // Errores crear
-    val eRut: String? = null,
-    val eNombre: String? = null,
-    val eEmail: String? = null,
-    val eTelefono: String? = null,
-    val eContrasena: String? = null,
+    val errRut: String? = null,
+    val errNombre: String? = null,
+    val errEmail: String? = null,
+    val errTelefono: String? = null,
+    val errNacimiento: String? = null,
+    val errRol: String? = null,
+    val errPassword: String? = null,
 
-    val puedeCrear: Boolean = false,
-    val creando: Boolean = false,
 
     // Editar usuario (por RUT PK)
     val mostrarEditar: Boolean = false,
@@ -67,7 +74,7 @@ data class AdminUsuariosUiState(
     val editando: Boolean = false
 )
 
-//VIEWMODEL
+// VIEWMODEL
 class AdminUsuariosViewModel(
     private val repositorio: UserRepository
 ) : ViewModel() {
@@ -77,7 +84,7 @@ class AdminUsuariosViewModel(
 
     init { recargarUsuarios() }
 
-    //LISTAR / RECARGAR
+    // LISTAR / RECARGAR
     fun recargarUsuarios() {
         viewModelScope.launch {
             _ui.update { it.copy(cargando = true, mensajeError = null) }
@@ -91,7 +98,7 @@ class AdminUsuariosViewModel(
         }
     }
 
-    //ELIMINAR
+    // ELIMINAR
     fun solicitarEliminar(rut: String) { _ui.update { it.copy(rutAConfirmarEliminacion = rut) } }
     fun cancelarEliminar() { _ui.update { it.copy(rutAConfirmarEliminacion = null) } }
     fun confirmarEliminar() {
@@ -104,43 +111,86 @@ class AdminUsuariosViewModel(
         }
     }
 
-    //CREAR
-    fun abrirCrear() { _ui.update { it.copy(mostrarCrear = true) } }
+    // ===================== CREAR =====================
+
+    fun abrirCrear() {
+        viewModelScope.launch {
+            // Limpia estado y abre diálogo
+            _ui.update {
+                it.copy(
+                    mostrarCrear = true,
+                    creando = false,
+                    puedeCrear = false,
+                    cRut = "", cNombre = "", cEmail = "", cTelefono = "", cDireccion = "", cNacimiento = "",
+                    cRolId = null, cRolNombreSeleccionado = null,
+                    errRut = null, errNombre = null, errEmail = null, errTelefono = null, errNacimiento = null, errRol = null,
+                    mensajeError = null,
+                    cPassword = "",
+                    errPassword = null,
+                    )
+            }
+            // Cargar roles si está vacío
+            if (_ui.value.rolesDisponibles.isEmpty()) {
+                val resRoles = repositorio.adminListRoles()
+                _ui.update { st ->
+                    resRoles.fold(
+                        onSuccess = { roles -> st.copy(rolesDisponibles = roles) },
+                        onFailure = { err -> st.copy(mensajeError = err.message ?: "No se pudieron cargar los roles") }
+                    )
+                }
+            }
+        }
+    }
+
     fun cerrarCrear() { _ui.update { it.copy(mostrarCrear = false) } }
 
     fun onCambiarRutCrear(v: String) {
         val t = v.trim()
-        _ui.update { it.copy(cRut = t, eRut = validateRut(t)).recalcularCrear() }
+        _ui.update { it.copy(cRut = t, errRut = validateRut(t)).recalcCrear() }
     }
 
     fun onCambiarNombreCrear(v: String) {
         val f = v.filter { it.isLetter() || it.isWhitespace() }
-        _ui.update { it.copy(cNombre = f, eNombre = validateNombre(f)).recalcularCrear() }
+        _ui.update { it.copy(cNombre = f, errNombre = validateNombre(f)).recalcCrear() }
     }
 
     fun onCambiarEmailCrear(v: String) {
         val t = v.trim()
-        _ui.update { it.copy(cEmail = t, eEmail = validateEmail(t)).recalcularCrear() }
+        _ui.update { it.copy(cEmail = t, errEmail = validateEmail(t)).recalcCrear() }
     }
 
     fun onCambiarTelefonoCrear(v: String) {
         val d = v.filter { it.isDigit() }
-        _ui.update { it.copy(cTelefono = d, eTelefono = if (d.isBlank()) null else validateTelefono(d)).recalcularCrear() }
+        _ui.update { it.copy(cTelefono = d, errTelefono = if (d.isBlank()) null else validateTelefono(d)).recalcCrear() }
     }
 
-    fun onCambiarDireccionCrear(v: String) { _ui.update { it.copy(cDireccion = v) } }
-
-    fun onCambiarContrasenaCrear(v: String) {
-        _ui.update { it.copy(cContrasena = v, eContrasena = validateContraseña(v)).recalcularCrear() }
+    fun onCambiarDireccionCrear(v: String) {
+        _ui.update { it.copy(cDireccion = v).recalcCrear() }
     }
 
-    fun onCambiarRolCrear(rolId: Long) { _ui.update { it.copy(cRolId = rolId) } }
+    fun onCambiarNacimientoCrear(v: String) {
+        val t = v.trim()
+        _ui.update { it.copy(cNacimiento = t, errNacimiento = if (t.isBlank()) "Fecha requerida" else validateBirthDate(t)).recalcCrear() }
+    }
 
-    private fun AdminUsuariosUiState.recalcularCrear(): AdminUsuariosUiState {
-        val sinErrores = listOf(eRut, eNombre, eEmail, eTelefono, eContrasena).all { it == null }
-        val completos = cRut.isNotBlank() && cNombre.isNotBlank() && cEmail.isNotBlank() && cContrasena.isNotBlank()
+    fun onSeleccionarRolCrear(rolId: Long, rolNombre: String) {
+        _ui.update { it.copy(cRolId = rolId, cRolNombreSeleccionado = rolNombre, errRol = null).recalcCrear() }
+    }
+
+    fun onCambiarPasswordCrear(v: String) {
+        val p = v.trim()
+        val err = if (p.length < 6) "Mínimo 6 caracteres" else null
+        _ui.update { it.copy(cPassword = p, errPassword = err).recalcCrear() }
+    }
+
+
+    private fun AdminUsuariosUiState.recalcCrear(): AdminUsuariosUiState {
+        val sinErrores = listOf(errRut, errNombre, errEmail, errTelefono, errNacimiento, errRol, errPassword).all { it == null }
+        val completos = cRut.isNotBlank() && cNombre.isNotBlank() && cEmail.isNotBlank() &&
+                cNacimiento.isNotBlank() && cRolId != null && cPassword.isNotBlank()
         return copy(puedeCrear = sinErrores && completos)
     }
+
 
     fun confirmarCrear() {
         val s = _ui.value
@@ -155,19 +205,23 @@ class AdminUsuariosViewModel(
                 email = s.cEmail,
                 phone = if (s.cTelefono.isBlank()) null else s.cTelefono,
                 address = s.cDireccion,
-                birthDate = ""
+                birthDate = s.cNacimiento
             )
 
-            val res = repositorio.adminCreateUser(usuario, s.cContrasena, s.cRolId)
+            val res = repositorio.adminCreateUser(usuario, s.cPassword, s.cRolId ?: -1L)
+
             if (res.isSuccess) {
                 _ui.update {
                     it.copy(
                         mostrarCrear = false,
                         creando = false,
-                        cRut = "", cNombre = "", cEmail = "", cTelefono = "", cDireccion = "", cContrasena = "",
                         puedeCrear = false,
-                        eRut = null, eNombre = null, eEmail = null, eTelefono = null, eContrasena = null
-                    )
+                        cRut = "", cNombre = "", cEmail = "", cTelefono = "", cDireccion = "", cNacimiento = "",
+                        cRolId = null, cRolNombreSeleccionado = null,
+                        errRut = null, errNombre = null, errEmail = null, errTelefono = null, errNacimiento = null, errRol = null,
+                        cPassword = "",
+                        errPassword = null,
+                        )
                 }
                 recargarUsuarios()
             } else {
@@ -176,7 +230,8 @@ class AdminUsuariosViewModel(
         }
     }
 
-    //EDITAR
+    // ===================== EDITAR =====================
+
     fun abrirEditar(rut: String) {
         viewModelScope.launch {
             val res = repositorio.adminGetUserByRut(rut)
@@ -213,6 +268,7 @@ class AdminUsuariosViewModel(
         _ui.update { it.copy(eTelefono2 = d, errTelefono2 = if (d.isBlank()) null else validateTelefono(d)).recalcularEditar() }
     }
 
+    // Aunque en UI están bloqueados, mantenemos setters por consistencia (no harán efecto si el campo está disabled)
     fun onCambiarDireccionEditar(v: String) { _ui.update { it.copy(eDireccion2 = v).recalcularEditar() } }
 
     fun onCambiarNacimientoEditar(v: String) {
@@ -254,7 +310,8 @@ class AdminUsuariosViewModel(
         }
     }
 
-    //ASIGNAR ROL
+    // ===================== ASIGNAR ROL =====================
+
     fun abrirAsignarRol(rut: String) {
         viewModelScope.launch {
             _ui.update { it.copy(mostrarAsignarRol = true, rutParaAsignar = rut, mensajeError = null) }

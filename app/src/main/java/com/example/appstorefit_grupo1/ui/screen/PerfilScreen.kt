@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
@@ -26,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +53,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// ===== Helpers de cámara =====
+//Helpers de cámara
 private fun createTempImageFile(context: Context): File {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val storageDir = File(context.cacheDir, "images").apply { if (!exists()) mkdirs() }
@@ -70,7 +74,6 @@ fun PerfilScreen(navController: NavController) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
 
     val db = remember { AppDatabase.getInstance(context) }
     val repo = remember {
@@ -100,7 +103,7 @@ fun PerfilScreen(navController: NavController) {
             val emailActual = SessionManager.user?.email
             if (!finalUri.isNullOrBlank() && !emailActual.isNullOrBlank()) {
                 scope.launch {
-                    repo.saveUserPhoto(emailActual!!, finalUri!!)
+                    repo.saveUserPhoto(emailActual, finalUri)
                     repo.refreshSessionUserByEmail(emailActual)
                     user = SessionManager.user // refresca en memoria
                 }
@@ -155,7 +158,17 @@ fun PerfilScreen(navController: NavController) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("MI PERFIL", fontWeight = FontWeight.Bold) }) }
+        topBar = {
+            TopAppBar(
+                title = { Text("MI PERFIL", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = cs.surface,
+                    titleContentColor = cs.onSurface,
+                    navigationIconContentColor = cs.onSurface,
+                    actionIconContentColor = cs.onSurface
+                )
+            )
+        }
     ) { inner ->
         val u = user ?: return@Scaffold
         val scrollState = rememberScrollState()
@@ -201,46 +214,51 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
-            // ── Tarjeta 2: Cámara
+            // ── Tarjeta 2: Foto perfil (centrada y ordenada)
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Foto Perfil",
                         style = MaterialTheme.typography.titleMedium,
+                        color = cs.onSurface,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.height(12.dp))
-
-                    if (photoUriString.isNullOrEmpty()) {
-                        Text(
-                            text = "Sin Foto de Perfil",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    } else {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(Uri.parse(photoUriString)).crossfade(true)
-                                .build(),
-                            contentDescription = "Foto Tomada",
-                            modifier = Modifier
-                                .size(140.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.height(12.dp))
-                    }
+                    Spacer(Modifier.height(14.dp))
 
                     var showDialog by remember { mutableStateOf(false) }
 
                     if (photoUriString.isNullOrEmpty()) {
+                        // Placeholder redondo
+                        Box(
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .background(cs.surfaceVariant.copy(alpha = 0.45f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = null,
+                                tint = cs.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Sin foto de perfil",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = cs.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(14.dp))
+
                         Button(
                             onClick = {
                                 val file = createTempImageFile(context)
@@ -248,12 +266,27 @@ fun PerfilScreen(navController: NavController) {
                                 pendingCaptureUri = uri
                                 takePictureLauncher.launch(uri)
                             }
-                        ) { Text("Tomar foto") }
+                        ) {
+                            Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Tomar foto")
+                        }
                     } else {
-                        // Editar + Eliminar en la MISMA fila
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(Uri.parse(photoUriString)).crossfade(true)
+                                .build(),
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier
+                                .size(140.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.height(14.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(
                                 onClick = {
@@ -263,32 +296,38 @@ fun PerfilScreen(navController: NavController) {
                                     takePictureLauncher.launch(uri)
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Text("Editar foto") }
-
+                            ) {
+                                Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Reemplazar")
+                            }
                             OutlinedButton(
                                 onClick = { showDialog = true },
                                 modifier = Modifier.weight(1f)
-                            ) { Text("Eliminar foto") }
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Eliminar")
+                            }
                         }
 
                         if (showDialog) {
                             AlertDialog(
                                 onDismissRequest = { showDialog = false },
-                                title = { Text("Confirmación") },
-                                text = { Text("¿Desea eliminar la foto?") },
+                                title = { Text("Eliminar foto") },
+                                text = { Text("¿Deseas eliminar la foto de perfil?") },
                                 confirmButton = {
                                     TextButton(onClick = {
                                         val email = u.email
                                         photoUriString = null
                                         showDialog = false
                                         Toast.makeText(context, "Foto eliminada", Toast.LENGTH_SHORT).show()
-                                        // Persiste borrado en DB
                                         scope.launch {
                                             repo.clearUserPhoto(email)
                                             repo.refreshSessionUserByEmail(email)
                                             user = SessionManager.user
                                         }
-                                    }) { Text("Aceptar") }
+                                    }) { Text("Eliminar") }
                                 },
                                 dismissButton = {
                                     TextButton(onClick = { showDialog = false }) { Text("Cancelar") }
@@ -299,20 +338,19 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
+            // Campos read-only con borde degradado
             CampoReadOnlyDegradado(
                 etiqueta = "Correo electrónico",
                 valor = u.email,
                 leadingIcon = { Icon(Icons.Filled.AlternateEmail, contentDescription = null) },
                 borderBrush = grad1
             )
-
             CampoReadOnlyDegradado(
                 etiqueta = "RUT",
                 valor = u.rut,
                 leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
                 borderBrush = grad2
             )
-
             CampoReadOnlyDegradado(
                 etiqueta = "Contraseña",
                 valor = "********",
@@ -324,24 +362,18 @@ fun PerfilScreen(navController: NavController) {
                 },
                 borderBrush = grad1
             )
-
             CampoReadOnlyDegradado(
                 etiqueta = "Fecha de Nacimiento",
                 valor = u.birthDate,
                 leadingIcon = { Icon(Icons.Filled.Cake, contentDescription = null) },
                 borderBrush = grad1
             )
-
             CampoReadOnlyDegradado(
                 etiqueta = "Teléfono",
-                valor = run {
-                    val telefono = u.phone
-                    if (telefono.isNullOrBlank()) "No registrado" else telefono
-                },
+                valor = u.phone?.takeIf { it.isNotBlank() } ?: "No registrado",
                 leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
                 borderBrush = grad2
             )
-
             CampoReadOnlyDegradado(
                 etiqueta = "Dirección",
                 valor = u.address,
@@ -349,24 +381,20 @@ fun PerfilScreen(navController: NavController) {
                 borderBrush = grad1
             )
 
-            // --- Cerrar sesión ---
             Spacer(Modifier.height(16.dp))
 
             Button(
                 onClick = {
-                    // limpiar sesión
                     SessionManager.user = null
                     SessionManager.roleId = null
-
-                    // volver al Login limpiando el back stack
                     navController.navigate(Route.Login.path) {
                         popUpTo(navController.graph.startDestinationId) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = cs.primary,
+                    contentColor = cs.onPrimary
                 ),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
@@ -375,7 +403,6 @@ fun PerfilScreen(navController: NavController) {
             ) {
                 Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge)
             }
-
         }
     }
 }
