@@ -142,6 +142,86 @@ abstract class AppDatabase : RoomDatabase() {
                     )
                 }
             }
+
+            // --- Variantes por modelo: Negro/Blanco x XS..XL (idempotente) ---
+            run {
+                val tallas = listOf("XS","S","M","L","XL")
+                val COLOR_NEGRO  = "Negro con detalles blancos"
+                val COLOR_BLANCO = "Blanco con detalles negros"
+
+                val existentes = pDao.getAll()
+
+                data class ModeloBase(val idCat: Long, val modelo: String, val precio: Int)
+                val modelosBase = existentes
+                    .groupBy { it.idCategoria }
+                    .flatMap { (idCat, lista) ->
+                        // normaliza quitando prefijo B para agrupar
+                        val modelosDistinct = lista
+                            .map { it.modelo.removePrefix("B") }
+                            .distinct()
+
+                        modelosDistinct.map { mb ->
+                            // referencia para precio (si no hay exacto, usa cualquiera)
+                            val ref = lista.firstOrNull { it.modelo == mb } ?: lista.first()
+                            ModeloBase(idCat = idCat, modelo = mb, precio = ref.precio)
+                        }
+                    }
+
+                // Generar combinaciones faltantes
+                modelosBase.forEach { base ->
+                    var nextId = (pDao.getMaxIdForCategory(base.idCat) ?: 0L) + 1L
+                    val aInsertar = mutableListOf<ProductosEntity>()
+
+                    // 1) Negro (modelo base)
+                    for (t in tallas) {
+                        val yaExiste = pDao.countByCatModeloColorTalla(
+                            idCategoria = base.idCat,
+                            modelo = base.modelo,
+                            color = COLOR_NEGRO,
+                            talla = t
+                        ) > 0
+                        if (!yaExiste) {
+                            aInsertar += ProductosEntity(
+                                idCategoria = base.idCat,
+                                idProducto  = nextId++,
+                                marca       = "StoreFit",
+                                modelo      = base.modelo,
+                                color       = COLOR_NEGRO,
+                                talla       = t,
+                                precio      = base.precio,
+                                stock       = if (t == "M") 80 else 30
+                            )
+                        }
+                    }
+
+                    // 2) Blanco (modelo con prefijo B)
+                    val modeloBlanco = "B${base.modelo}"
+                    for (t in tallas) {
+                        val yaExiste = pDao.countByCatModeloColorTalla(
+                            idCategoria = base.idCat,
+                            modelo = modeloBlanco,
+                            color = COLOR_BLANCO,
+                            talla = t
+                        ) > 0
+                        if (!yaExiste) {
+                            aInsertar += ProductosEntity(
+                                idCategoria = base.idCat,
+                                idProducto  = nextId++,
+                                marca       = "StoreFit",
+                                modelo      = modeloBlanco,
+                                color       = COLOR_BLANCO,
+                                talla       = t,
+                                precio      = base.precio,
+                                stock       = 30
+                            )
+                        }
+                    }
+
+                    if (aInsertar.isNotEmpty()) {
+                        pDao.insertAll(aInsertar) // IGNORE por si aparece algún duplicado en carrera
+                    }
+                }
+            }
         }
     }
 

@@ -8,6 +8,10 @@ interface ProductosDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(product: ProductosEntity): Long
 
+    // NUEVO: inserción masiva idempotente (evita duplicados)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(productos: List<ProductosEntity>): List<Long>
+
     @Update
     suspend fun update(product: ProductosEntity): Int
 
@@ -54,12 +58,43 @@ interface ProductosDao {
     ): Int
 
     @Query("""
-    SELECT * FROM producto
-    WHERE id_categoria = :idCategoria AND modelo = :modelo
-    ORDER BY talla, color
+        SELECT * FROM producto
+        WHERE id_categoria = :idCategoria AND modelo = :modelo
+        ORDER BY talla, color
     """)
     suspend fun getByCategoriaYModelo(
         idCategoria: Long,
         modelo: String
     ): List<ProductosEntity>
+
+    // NUEVO: trae 1 variante exacta por modelo+color+talla
+    @Query("""
+        SELECT * FROM producto
+        WHERE id_categoria = :idCategoria
+          AND modelo = :modelo
+          AND color  = :color
+          AND talla  = :talla
+        LIMIT 1
+    """)
+    suspend fun getByCatModeloColorTalla(
+        idCategoria: Long,
+        modelo: String,
+        color: String,
+        talla: String
+    ): ProductosEntity?
+
+    // NUEVO: contar si existe esa variante (para evitar duplicados en seed)
+    @Query("""
+        SELECT COUNT(*) FROM producto
+        WHERE id_categoria = :idCategoria
+          AND modelo = :modelo
+          AND color  = :color
+          AND talla  = :talla
+    """)
+    suspend fun countByCatModeloColorTalla(
+        idCategoria: Long,
+        modelo: String,
+        color: String,
+        talla: String
+    ): Int
 }
