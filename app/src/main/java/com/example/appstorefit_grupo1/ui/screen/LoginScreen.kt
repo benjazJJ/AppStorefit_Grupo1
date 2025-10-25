@@ -162,7 +162,7 @@ private fun LoginScreen(
                 .widthIn(max = maxW)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = Modifier.padding(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
