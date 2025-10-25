@@ -78,6 +78,10 @@ fun DetalleProductoScreen(
     var selectedColor by remember { mutableStateOf<String?>(null) }
     var varianteSelect by remember { mutableStateOf<ProductosEntity?>(null) }
 
+    // Orden correcto de tallas para la UI
+    val ordenTallas = listOf("XS","S","M","L","XL")
+    fun idxTalla(t: String) = ordenTallas.indexOf(t).let { if (it == -1) Int.MAX_VALUE else it }
+
     val clp = remember {
         NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply {
             currency = Currency.getInstance("CLP")
@@ -89,7 +93,7 @@ fun DetalleProductoScreen(
         val all = repo.getByCategoria(idCategoria).getOrDefault(emptyList())
         variantes = all
             .filter { it.modelo == modelo || it.modelo == "B$modelo" }
-            .sortedWith(compareBy<ProductosEntity> { it.talla }.thenBy { it.color })
+            .sortedWith(compareBy<ProductosEntity>({ idxTalla(it.talla) }, { it.color }))
     }
 
     LaunchedEffect(selectedColor, selectedTalla, idCategoria, modelo) {
@@ -109,7 +113,9 @@ fun DetalleProductoScreen(
     val BLANCO = "Blanco con detalles negros"
 
 // Tallas existentes (en cualquier color)
-    val tallas = remember(variantes) { variantes.map { it.talla }.distinct() }
+    val tallas = remember(variantes) {
+        variantes.map { it.talla }.distinct().sortedBy { idxTalla(it) }
+    }
 
 // Disponibilidad por color para la talla actual
     val negroDisponible = remember(variantes, selectedTalla) {
@@ -243,12 +249,18 @@ fun DetalleProductoScreen(
                     }
                 }
 
-                // Precio y stock
-                Text("Precio: ${clp.format(precio)}", fontWeight = FontWeight.Bold)
-                Text(
-                    text = if (stock > 0) "Stock disponible: $stock" else "Sin stock",
-                    color = if (stock > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
-                )
+                val tieneSeleccion = (selectedColor != null && selectedTalla != null && varianteSelect != null)
+                val precio = varianteSelect?.precio ?: 0
+                val stock  = varianteSelect?.stock  ?: 0
+
+                // Precio y stock (solo si hay variante seleccionada)
+                if (tieneSeleccion) {
+                    Text("Precio: ${clp.format(precio)}", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = if (stock > 0) "Stock disponible: $stock" else "Sin stock",
+                        color = if (stock > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                    )
+                }
 
                 // Botón: agrega al carrito con el VM
                 Button(
