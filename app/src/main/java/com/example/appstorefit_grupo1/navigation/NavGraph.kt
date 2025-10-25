@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -38,7 +39,7 @@ private data class TopDest(
 //construimos el menú según el rol
 private fun topDestinationsFor(roleId: Long?): List<TopDest> {
     val common = listOf(
-        TopDest(Route.Productos.path, "Productos", Icons.Filled.ShoppingCart),
+        TopDest(Route.Productos.path, "Productos", Icons.Filled.Home),
         TopDest(Route.Carrito.path,   "Carrito",   Icons.Filled.ShoppingCart),
         TopDest(Route.Perfil.path,    "Perfil",    Icons.Filled.Person)
     )

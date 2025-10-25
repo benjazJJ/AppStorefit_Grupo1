@@ -32,6 +32,7 @@ import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.ProductosRepository
 import com.example.appstorefit_grupo1.ui.components.AddToCartDialog
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
@@ -52,6 +53,7 @@ fun DetalleProductoScreen(
         viewModel(factory = CarritoViewModelFactory(context, db.carritoDao()))
 
     // Snackbar para mostrar mensajes (p. ej., “Sin stock suficiente”)
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Flag para mostrar la animación de “añadido”
@@ -74,6 +76,7 @@ fun DetalleProductoScreen(
     var variantes by remember { mutableStateOf<List<ProductosEntity>>(emptyList()) }
     var selectedTalla by remember { mutableStateOf<String?>(null) }
     var selectedColor by remember { mutableStateOf<String?>(null) }
+    var varianteSelect by remember { mutableStateOf<ProductosEntity?>(null) }
 
     val clp = remember {
         NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply {
@@ -83,21 +86,38 @@ fun DetalleProductoScreen(
     }
 
     LaunchedEffect(idCategoria, modelo) {
-        variantes = repo.getByCategoria(idCategoria)
-            .getOrDefault(emptyList())
-            .filter { it.modelo == modelo }
+        val all = repo.getByCategoria(idCategoria).getOrDefault(emptyList())
+        variantes = all
+            .filter { it.modelo == modelo || it.modelo == "B$modelo" }
             .sortedWith(compareBy<ProductosEntity> { it.talla }.thenBy { it.color })
-
-        if (variantes.isNotEmpty()) {
-            selectedTalla = variantes.first().talla
-            selectedColor = variantes.firstOrNull { it.color == "Negro con detalles blancos" }?.color
-                ?: variantes.first().color
-        } else {
-            selectedColor = "Negro con detalles blancos"
-        }
     }
 
+    LaunchedEffect(selectedColor, selectedTalla, idCategoria, modelo) {
+        val color = selectedColor ?: return@LaunchedEffect
+        val talla = selectedTalla ?: return@LaunchedEffect
+        val modeloEfectivo = if (color == "Blanco con detalles negros") "B$modelo" else modelo
+
+        varianteSelect = db.productosDao().getByCatModeloColorTalla(
+            idCategoria = idCategoria,
+            modelo = modeloEfectivo,
+            color = color,
+            talla = talla
+        )
+    }
+
+    val NEGRO = "Negro con detalles blancos"
+    val BLANCO = "Blanco con detalles negros"
+
+// Tallas existentes (en cualquier color)
     val tallas = remember(variantes) { variantes.map { it.talla }.distinct() }
+
+// Disponibilidad por color para la talla actual
+    val negroDisponible = remember(variantes, selectedTalla) {
+        variantes.any { it.talla == selectedTalla && it.color == NEGRO }
+    }
+    val blancoDisponible = remember(variantes, selectedTalla) {
+        variantes.any { it.talla == selectedTalla && it.color == BLANCO }
+    }
 
     val imagenRes = remember(idCategoria, selectedColor) {
         val blanco = selectedColor == "Blanco con detalles negros"
@@ -110,9 +130,8 @@ fun DetalleProductoScreen(
         }
     }
 
-    val varianteSeleccionada = variantes.firstOrNull { it.talla == selectedTalla && it.color == selectedColor }
-    val precio = varianteSeleccionada?.precio ?: variantes.firstOrNull()?.precio ?: 0
-    val stock = varianteSeleccionada?.stock ?: 0
+    val precio = varianteSelect?.precio ?: 0
+    val stock  = varianteSelect?.stock  ?: 0
 
     Scaffold(
         topBar = {
@@ -150,17 +169,40 @@ fun DetalleProductoScreen(
             Column {
                 Text("Color", fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // BLANCO
                     ColorSwatch(
                         color = Color.White,
-                        borderColor = Color.LightGray,
-                        selected = selectedColor == "Blanco con detalles negros",
-                        onClick = { selectedColor = "Blanco con detalles negros" }
+                        borderColor = if (blancoDisponible) Color.LightGray else Color.Gray,
+                        selected = selectedColor == BLANCO,
+                        onClick = {
+                            // Si la talla actual no existe en blanco, mover a la primera talla disponible en blanco
+                            val tallaOk = variantes.firstOrNull { it.color == BLANCO && it.talla == selectedTalla }?.talla
+                                ?: variantes.firstOrNull { it.color == BLANCO }?.talla
+                            if (tallaOk != null) {
+                                selectedTalla = tallaOk
+                                selectedColor = BLANCO
+                            } else {
+                                // No hay blanco en ninguna talla
+                                scope.launch { snackbarHostState.showSnackbar("No disponible en blanco") }
+                            }
+                        }
                     )
+
+                    // NEGRO
                     ColorSwatch(
                         color = Color.Black,
-                        borderColor = Color.LightGray,
-                        selected = selectedColor == "Negro con detalles blancos",
-                        onClick = { selectedColor = "Negro con detalles blancos" }
+                        borderColor = if (negroDisponible) Color.LightGray else Color.Gray,
+                        selected = selectedColor == NEGRO,
+                        onClick = {
+                            val tallaOk = variantes.firstOrNull { it.color == NEGRO && it.talla == selectedTalla }?.talla
+                                ?: variantes.firstOrNull { it.color == NEGRO }?.talla
+                            if (tallaOk != null) {
+                                selectedTalla = tallaOk
+                                selectedColor = NEGRO
+                            } else {
+                                scope.launch { snackbarHostState.showSnackbar("No disponible en negro") }
+                            }
+                        }
                     )
                 }
             }
@@ -186,13 +228,17 @@ fun DetalleProductoScreen(
                 ) {
                     tallas.forEach { t ->
                         val selected = selectedTalla == t
+                        val disponibleEnColor = variantes.any { it.talla == t && it.color == selectedColor }
                         OutlinedButton(
-                            onClick = { selectedTalla = t },
+                            onClick = { if (disponibleEnColor) selectedTalla = t },
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
-                                containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
-                            )
+                                containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                disabledContentColor = MaterialTheme.colorScheme.outline,
+                                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                            ),
+                            enabled = disponibleEnColor
                         ) { Text(t) }
                     }
                 }
@@ -207,17 +253,17 @@ fun DetalleProductoScreen(
                 // Botón: agrega al carrito con el VM
                 Button(
                     onClick = {
-                        val p = varianteSeleccionada ?: return@Button
+                        val p = varianteSelect ?: return@Button
                         carritoVm.agregar(
                             idCat = p.idCategoria,
                             idProd = p.idProducto,
                             modelo = p.modelo,
-                            color = selectedColor!!,
-                            talla = selectedTalla!!,
+                            color = p.color,
+                            talla = p.talla,
                             precioUnit = p.precio
                         )
                     },
-                    enabled = (selectedTalla != null && selectedColor != null && varianteSeleccionada != null && stock > 0),
+                    enabled = (varianteSelect != null && stock > 0),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Añadir al carrito") }
 
