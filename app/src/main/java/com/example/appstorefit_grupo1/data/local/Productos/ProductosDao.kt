@@ -1,6 +1,7 @@
 package com.example.appstorefit_grupo1.data.local.Productos
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProductosDao {
@@ -83,7 +84,7 @@ interface ProductosDao {
         talla: String
     ): ProductosEntity?
 
-    // NUEVO: contar si existe esa variante (para evitar duplicados en seed)
+    // contar si existe esa variante (para evitar duplicados en seed)
     @Query("""
         SELECT COUNT(*) FROM producto
         WHERE id_categoria = :idCategoria
@@ -97,4 +98,46 @@ interface ProductosDao {
         color: String,
         talla: String
     ): Int
+
+
+    // Streams reactivos (Room -> Flow)
+    @Query("SELECT * FROM producto ORDER BY id_categoria, id_producto")
+    fun observeAll(): Flow<List<ProductosEntity>>
+
+    @Query("SELECT * FROM producto WHERE id_categoria = :idCategoria ORDER BY id_producto")
+    fun observeByCategoria(idCategoria: Long): Flow<List<ProductosEntity>>
+
+    @Query("""
+        SELECT * FROM producto
+        WHERE id_categoria = :idCategoria AND modelo = :modelo
+        ORDER BY color, talla
+    """)
+    fun observeVariantesByCatAndModelo(
+        idCategoria: Long,
+        modelo: String
+    ): Flow<List<ProductosEntity>>
+
+    //helpers de stock (set y delta)
+    @Query("""
+        UPDATE producto
+        SET stock = :nuevoStock
+        WHERE id_categoria = :idCategoria AND id_producto = :idProducto
+    """)
+    suspend fun setStock(
+        idCategoria: Long,
+        idProducto: Long,
+        nuevoStock: Int
+    ): Int
+
+    @Query("""
+        UPDATE producto
+        SET stock = stock + :delta
+        WHERE id_categoria = :idCategoria AND id_producto = :idProducto
+    """)
+    suspend fun addToStock(
+        idCategoria: Long,
+        idProducto: Long,
+        delta: Int
+    ): Int
 }
+

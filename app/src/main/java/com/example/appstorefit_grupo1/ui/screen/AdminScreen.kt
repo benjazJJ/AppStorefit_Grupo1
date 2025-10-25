@@ -5,8 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Add
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Category
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -26,6 +28,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -45,18 +48,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.appstorefit_grupo1.ViewModel.AdminCategoriasViewModel
+import com.example.appstorefit_grupo1.ViewModel.AdminCategoriasViewModelFactory
+import com.example.appstorefit_grupo1.ViewModel.AdminProductsViewModel
+import com.example.appstorefit_grupo1.ViewModel.AdminProductsViewModelFactory
+import com.example.appstorefit_grupo1.ViewModel.AdminReportesViewModel
+import com.example.appstorefit_grupo1.ViewModel.AdminReportesViewModelFactory
 import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosUiState
 import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosViewModel
 import com.example.appstorefit_grupo1.ViewModel.AdminsUsersViewModelFactory
+import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -355,11 +362,50 @@ private fun AdminUsuariosTab() {
     }
 }
 
-// ========== OTRAS TABS (placeholders) ==========
 
 @Composable
 private fun AdminProductosTab() {
-    val productos by remember { mutableStateOf(listOf<String>()) }
+    val context = LocalContext.current
+    val vm: AdminProductsViewModel = viewModel(factory = AdminProductsViewModelFactory(context))
+
+    val productos by vm.productos.collectAsStateWithLifecycle()
+    val errorMsg by vm.error.collectAsStateWithLifecycle()
+    val cs = MaterialTheme.colorScheme
+
+    var editing by remember { mutableStateOf<ProductosEntity?>(null) }
+
+    // --- Controles de filtro/búsqueda ---
+    var search by remember { mutableStateOf("") }
+    // null = Todas las categorías
+    var selectedCat: Long? by remember { mutableStateOf(null) }
+
+    // categorías detectadas desde los datos (solo IDs que tienes hoy)
+    val categoriasIds = remember(productos) {
+        productos.map { it.idCategoria }.distinct().sorted()
+    }
+
+    // --- Filtrado + búsqueda ---
+    val filtrados = remember(productos, selectedCat, search) {
+        val s = search.trim()
+        productos
+            .asSequence()
+            .filter { selectedCat == null || it.idCategoria == selectedCat }
+            .filter {
+                if (s.isEmpty()) true
+                else {
+                    it.modelo.contains(s, ignoreCase = true) ||
+                            it.color.contains(s, ignoreCase = true)  ||
+                            it.talla.contains(s, ignoreCase = true)
+                }
+            }
+            .toList()
+    }
+
+    // --- Agrupación por modelo (por categoría+marca+modelo) ---
+    val grupos = remember(filtrados) {
+        filtrados.groupBy { Triple(it.idCategoria, it.marca, it.modelo) }
+            .toSortedMap(compareBy<Triple<Long, String, String>>({ it.first }, { it.third }))
+    }
 
     Column(
         modifier = Modifier
@@ -367,35 +413,304 @@ private fun AdminProductosTab() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Header
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Catálogo de productos", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { /* TODO Paso 3 */ }, enabled = false) { Text("Nuevo producto") }
+            // Sin botón "Nuevo producto" (lo pediste)
         }
 
-        if (productos.isEmpty()) {
-            EmptyState("Sin productos aún.\nEn el Paso 3 traeremos datos y haremos CRUD.")
+        // Error (si hay)
+        errorMsg?.let {
+            Text(it, color = cs.error)
+        }
+
+        // Búsqueda
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            label = { Text("Buscar por modelo, color o talla") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Chips de categoría (solo las existentes)
+        CategoryFilterRow(
+            categorias = categoriasIds,
+            selected = selectedCat,
+            onSelect = { selectedCat = it }
+        )
+
+        // Resumen conteo
+        Text(
+            "Mostrando ${filtrados.size} variantes en ${grupos.size} modelos",
+            style = MaterialTheme.typography.bodySmall,
+            color = cs.onSurfaceVariant
+        )
+
+        if (filtrados.isEmpty()) {
+            EmptyState("No hay productos que coincidan con los filtros.")
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(productos) { p ->
-                    ElevatedCard {
-                        ListItem(
-                            headlineContent = { Text(p) },
-                            supportingContent = { Text("Precio: $0 — Stock: 0") }
+            // Lista por grupos (modelo)
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                grupos.forEach { (clave, variantes) ->
+                    val (catId, marca, modelo) = clave
+                    item(key = "hdr-${catId}-${marca}-${modelo}") {
+                        GroupedProductCard(
+                            catId = catId,
+                            marca = marca,
+                            modelo = modelo,
+                            variantes = variantes,
+                            onEdit = { editing = it }
                         )
                     }
                 }
             }
         }
     }
+
+    //
+    editing?.let { producto ->
+        EditVariantStockDialog(
+            producto = producto,
+            onDismiss = { editing = null },
+            onConfirmSet = { nuevo ->
+                vm.setStock(producto.idCategoria, producto.idProducto, nuevo)
+                editing = null
+            }
+        )
+    }
+}
+
+
+@Composable
+private fun CategoryFilterRow(
+    categorias: List<Long>,
+    selected: Long?,
+    onSelect: (Long?) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FilterChip(
+            selected = (selected == null),
+            onClick = { onSelect(null) },
+            label = { Text("Todas") }
+        )
+        categorias.forEach { id ->
+            FilterChip(
+                selected = (selected == id),
+                onClick = { onSelect(id) },
+                label = { Text(id.toString()) }
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun GroupedProductCard(
+    catId: Long,
+    marca: String,
+    modelo: String,
+    variantes: List<ProductosEntity>,
+    onEdit: (ProductosEntity) -> Unit
+) {
+    ElevatedCard {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Encabezado del grupo (modelo)
+            Text("$marca • $modelo", fontWeight = FontWeight.SemiBold)
+            Text("Categoría: $catId · Variantes: ${variantes.size}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Divider()
+
+            // Variantes (color+talla)
+            variantes.sortedWith(
+                compareBy<ProductosEntity>({ it.color }, { it.talla })
+            ).forEach { v ->
+                VariantRow(v, onEdit)
+            }
+        }
+    }
 }
 
 @Composable
+private fun VariantRow(
+    v: ProductosEntity,
+    onEdit: (ProductosEntity) -> Unit
+) {
+    ListItem(
+        headlineContent = {
+            Text("Color: ${v.color} • Talla: ${v.talla}")
+        },
+        supportingContent = {
+            Text("Precio: ${formatCLP(v.precio)} · Stock: ${v.stock}")
+        },
+        trailingContent = {
+            IconButton(onClick = { onEdit(v) }) {
+                Icon(Icons.Filled.Edit, contentDescription = "Editar stock")
+            }
+        }
+    )
+}
+
+private fun formatCLP(monto: Int): String {
+    // CLP sin decimales y con separador de miles
+    return try {
+        val nf = java.text.NumberFormat.getInstance(java.util.Locale("es", "CL"))
+        nf.maximumFractionDigits = 0
+        nf.minimumFractionDigits = 0
+        "\$${nf.format(monto)}"
+    } catch (_: Exception) {
+        "\$$monto"
+    }
+}
+
+
+
+
+@Composable
+private fun ProductoAdminItem(
+    p: ProductosEntity,
+    onEdit: () -> Unit
+) {
+    ElevatedCard {
+        ListItem(
+            headlineContent = { Text("${p.marca} • ${p.modelo}", fontWeight = FontWeight.SemiBold) },
+            supportingContent = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Categoría: ${p.idCategoria} · ID: ${p.idProducto}")
+                    Text("Color: ${p.color} · Talla: ${p.talla}")
+                    Text("Precio: ${p.precio} CLP · Stock: ${p.stock}")
+                }
+            },
+            trailingContent = {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Editar stock")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun EditVariantStockDialog(
+    producto: ProductosEntity,
+    onDismiss: () -> Unit,
+    onConfirmSet: (Int) -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+    var stock by remember(producto) { mutableStateOf(producto.stock) }
+    var texto by remember(producto) { mutableStateOf(producto.stock.toString()) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun syncFromText(newText: String) {
+        texto = newText
+        val n = newText.toIntOrNull()
+        if (n == null) {
+            error = "Ingresa un número válido"
+        } else if (n < 0) {
+            error = "El stock no puede ser negativo"
+        } else {
+            error = null
+            stock = n
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar stock") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("${producto.marca} • ${producto.modelo}", fontWeight = FontWeight.SemiBold)
+                Text("Color: ${producto.color} • Talla: ${producto.talla}")
+                Text("Stock actual: ${producto.stock}", style = MaterialTheme.typography.bodySmall)
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (stock > 0) {
+                                stock -= 1
+                                texto = stock.toString()
+                                error = null
+                            }
+                        }
+                    ) { Icon(Icons.Filled.Remove, contentDescription = "Restar 1") }
+
+                    OutlinedTextField(
+                        value = texto,
+                        onValueChange = { syncFromText(it) },
+                        label = { Text("Stock") },
+                        singleLine = true,
+                        isError = error != null,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    IconButton(
+                        onClick = {
+                            stock += 1
+                            texto = stock.toString()
+                            error = null
+                        }
+                    ) { Icon(Icons.Filled.Add, contentDescription = "Sumar 1") }
+                }
+
+                // (Opcional) saltos rápidos
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = {
+                        if (stock >= 5) {
+                            stock -= 5; texto = stock.toString(); error = null
+                        } else {
+                            stock = 0; texto = "0"; error = null
+                        }
+                    }) { Text("−5") }
+                    TextButton(onClick = {
+                        stock += 5; texto = stock.toString(); error = null
+                    }) { Text("+5") }
+                }
+
+                if (error != null) {
+                    Text(error!!, color = cs.error, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (error == null) onConfirmSet(stock) },
+                enabled = (error == null)
+            ) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+
+
+
+
+@Composable
 private fun AdminCategoriasTab() {
-    val categorias by remember { mutableStateOf(listOf<String>()) }
+    val context = LocalContext.current
+
+    val vm: AdminCategoriasViewModel =
+        viewModel(factory = AdminCategoriasViewModelFactory(context))
+
+    val categorias by vm.resumen.collectAsStateWithLifecycle(initialValue = emptyList())
+    val errorMsg  by vm.error.collectAsStateWithLifecycle(initialValue = null)
+
+
+    val cs = MaterialTheme.colorScheme
+    var renaming by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
     Column(
         modifier = Modifier
@@ -409,19 +724,120 @@ private fun AdminCategoriasTab() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Categorías", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { /* TODO Paso 3 */ }, enabled = false) { Text("Nueva categoría") }
         }
 
+        // si el repo devolvió algún error (p.ej. nombre duplicado al renombrar), lo mostramos
+        errorMsg?.let { Text(it, color = cs.error) }
+
         if (categorias.isEmpty()) {
-            EmptyState("Sin categorías.\nPaso 3: conectaremos Room/Repo y CRUD.")
+            EmptyState("Sin categorías.")
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(categorias) { c ->
+                items(
+                    items = categorias,
+                    key = { it.id }
+                ) { c: com.example.appstorefit_grupo1.data.local.Categoria.CategoriaResumen ->
                     ElevatedCard {
                         ListItem(
-                            headlineContent = { Text(c) },
-                            supportingContent = { Text("Productos en la categoría: 0") }
+                            headlineContent = { Text(c.nombre) },
+                            supportingContent = {
+                                Text("Productos en la categoría: ${c.productos} · Modelos: ${c.modelos}")
+                            },
+                            trailingContent = {
+                                IconButton(onClick = { renaming = c.id to c.nombre }) {
+                                    Icon(Icons.Filled.Edit, contentDescription = "Renombrar")
+                                }
+                            }
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    // Diálogo para renombrar (sin eliminar)
+    renaming?.let { (id, actual) ->
+        var nuevo by remember(id) { mutableStateOf(actual) }
+        var errorLocal by remember { mutableStateOf<String?>(null) }
+
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { renaming = null },
+            title = { Text("Renombrar categoría") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = nuevo,
+                        onValueChange = { nuevo = it; errorLocal = null },
+                        label = { Text("Nuevo nombre") },
+                        singleLine = true,
+                        isError = errorLocal != null
+                    )
+                    errorLocal?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (nuevo.isBlank()) { errorLocal = "Nombre requerido"; return@TextButton }
+                    vm.renombrar(id, nuevo)
+                    renaming = null
+                }) { Text("Guardar") }
+            },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancelar") } }
+        )
+    }
+}
+
+
+@Composable
+private fun AdminReportesTab() {
+    val context = LocalContext.current
+
+    // VM de reportes (total usuarios + últimos registrados)
+    val vm: AdminReportesViewModel =
+        viewModel(factory = AdminReportesViewModelFactory(context))
+
+    // Estados en vivo (con valor inicial para evitar “cannot infer type”)
+    val totalUsuarios by vm.totalUsuarios.collectAsStateWithLifecycle(initialValue = 0)
+    val ultimos        by vm.ultimosRegistrados.collectAsStateWithLifecycle(initialValue = emptyList())
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("Reportes", style = MaterialTheme.typography.titleMedium)
+
+        // Tarjeta: total de usuarios
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("Usuarios registrados", fontWeight = FontWeight.SemiBold)
+                Text("Total: $totalUsuarios")
+            }
+        }
+
+        // Tarjeta: últimos registrados (nombre + correo)
+        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Últimos registrados", fontWeight = FontWeight.SemiBold)
+
+                if (ultimos.isEmpty()) {
+                    Text("Sin registraciones recientes.")
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(ultimos, key = { it.rut }) { row ->
+                            ListItem(
+                                headlineContent = { Text(row.name) },
+                                supportingContent = { Text(row.email) }
+                            )
+                            Divider()
+                        }
                     }
                 }
             }
@@ -429,28 +845,6 @@ private fun AdminCategoriasTab() {
     }
 }
 
-@Composable
-private fun AdminReportesTab() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Reportes", style = MaterialTheme.typography.titleMedium)
-        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Próximamente:", fontWeight = FontWeight.SemiBold)
-                Text("• Ventas por período")
-                Text("• Top productos")
-                Text("• Usuarios activos")
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = { /* TODO Paso 4 */ }, enabled = false) { Text("Abrir reportes") }
-    }
-}
 
 @Composable
 private fun EmptyState(message: String) {
@@ -465,7 +859,6 @@ private fun EmptyState(message: String) {
 }
 
 //CREAR USUARIO (UI)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CrearUsuarioDialog(

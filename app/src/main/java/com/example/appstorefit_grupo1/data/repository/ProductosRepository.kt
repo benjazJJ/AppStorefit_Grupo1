@@ -2,6 +2,7 @@ package com.example.appstorefit_grupo1.data.repository
 
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosDao
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
+import kotlinx.coroutines.flow.Flow
 
 class ProductosRepository(
     private val dao: ProductosDao
@@ -11,6 +12,36 @@ class ProductosRepository(
         "Negro con detalles blancos"
     )
     private val tallasPermitidas = setOf("XS","S","M","L","XL")
+
+    fun observeAll(): Flow<List<ProductosEntity>> = dao.observeAll()
+
+    fun observeByCategoria(idCategoria: Long): Flow<List<ProductosEntity>> =
+        dao.observeByCategoria(idCategoria)
+
+    fun observeVariantes(idCategoria: Long, modelo: String): Flow<List<ProductosEntity>> =
+        dao.observeVariantesByCatAndModelo(idCategoria, modelo)
+
+
+    suspend fun setStock(
+        idCategoria: Long,
+        idProducto: Long,
+        nuevoStock: Int
+    ): Result<Unit> {
+        if (nuevoStock < 0) return Result.failure(IllegalArgumentException("El stock no puede ser negativo"))
+        val rows = dao.setStock(idCategoria, idProducto, nuevoStock)
+        return if (rows > 0) Result.success(Unit)
+        else Result.failure(IllegalStateException("No se pudo actualizar el stock"))
+    }
+
+    suspend fun addToStock(
+        idCategoria: Long,
+        idProducto: Long,
+        delta: Int
+    ): Result<Unit> {
+        val rows = dao.addToStock(idCategoria, idProducto, delta)
+        return if (rows > 0) Result.success(Unit)
+        else Result.failure(IllegalStateException("No se pudo actualizar el stock"))
+    }
 
     suspend fun create(
         idCategoria: Long,

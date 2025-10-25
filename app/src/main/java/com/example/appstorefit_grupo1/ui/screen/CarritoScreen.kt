@@ -1,16 +1,22 @@
 package com.example.appstorefit_grupo1.ui.screen
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,25 +34,16 @@ import java.util.Locale
 fun CarritoScreen(navController: NavHostController) {
     val ctx = LocalContext.current
 
-    // Usas la misma instancia de DB para obtener el DAO
     val carritoDao = remember { AppDatabase.getInstance(ctx).carritoDao() }
-
-    // CORRECCIÓN: tu Factory espera (Context, CarritoDao?)
     val vm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(ctx, carritoDao))
-
     val state by vm.uiState.collectAsStateWithLifecycle()
 
-    // Snackbar para mostrar mensajes del ViewModel
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Estado para abrir/cerrar el diálogo de “compra exitosa”
     var mostrarDialogoExito by remember { mutableStateOf(false) }
 
-    // Escuchar eventos one-shot desde el ViewModel
     val evento = vm.eventos.collectAsState(initial = null).value
     LaunchedEffect(evento) {
         evento?.let { msg ->
-            // Si el mensaje indica compra confirmada, mostramos el diálogo con la imagen
             if (msg.startsWith("Compra confirmada")) {
                 mostrarDialogoExito = true
             }
@@ -55,7 +52,7 @@ fun CarritoScreen(navController: NavHostController) {
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }, // añade el host de snackbars
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
                 Row(
@@ -70,8 +67,6 @@ fun CarritoScreen(navController: NavHostController) {
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-
-                    // CORRECCIÓN: llamar a vm.onComprar() y habilitar solo si hay items
                     Button(
                         onClick = { vm.onComprar() },
                         enabled = state.items.isNotEmpty(),
@@ -134,10 +129,39 @@ fun CarritoScreen(navController: NavHostController) {
             onDismiss = {
                 mostrarDialogoExito = false
                 navController.navigate(Route.Productos.path) {
-                    popUpTo(0) { inclusive = true }  // limpia completamente el stack
+                    popUpTo(0) { inclusive = true }
                     launchSingleTop = true
                 }
             }
+        )
+    }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Miniatura con fondo y borde (se mantiene tal cual)                        */
+/* -------------------------------------------------------------------------- */
+@Composable
+private fun ProductThumb(
+    imageRes: Int,
+    contentDescription: String?,
+    size: Dp = 64.dp
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(14.dp)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(imageRes),
+            contentDescription = contentDescription,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }
@@ -161,64 +185,78 @@ private fun CarritoItemCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(imageRes),
-                contentDescription = modelo,
-                modifier = Modifier.size(64.dp)
-            )
+            ProductThumb(imageRes = imageRes, contentDescription = modelo, size = 68.dp)
 
+            Spacer(Modifier.width(12.dp))
+
+            // Columna central
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp)
             ) {
+                // Nombre
                 Text(
                     modelo,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                // Talla en una sola línea
                 Text(
-                    "TALLA $talla",
+                    "Talla: $talla",
                     style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                FilledTonalButton(
-                    onClick = onRestar,
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(32.dp)
-                ) { Text("−") }
+                Spacer(Modifier.height(4.dp))
 
-                Text("$cantidad", style = MaterialTheme.typography.bodyLarge)
+                // Controles - cantidad +
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalButton(
+                        onClick = onRestar,
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(28.dp)
+                    ) { Text("−") }
 
-                FilledTonalButton(
-                    onClick = onSumar,
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.size(32.dp)
-                ) { Text("+") }
+                    Text(" $cantidad ", style = MaterialTheme.typography.bodyLarge)
+
+                    FilledTonalButton(
+                        onClick = onSumar,
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.size(28.dp)
+                    ) { Text("+") }
+                }
             }
 
             Spacer(Modifier.width(8.dp))
 
-            Text(
-                text = (precioUnitarioCLP * cantidad).toCLP(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            // Precio + Eliminar (disminuye hasta 0 y elimina)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = (precioUnitarioCLP * cantidad).toCLP(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
 
-            Spacer(Modifier.width(8.dp))
-
-            OutlinedButton(onClick = onEliminar) {
-                Text("Eliminar")
+                TextButton(
+                    onClick = {
+                        if (cantidad > 1) {
+                            onRestar()    // reduce 1 unidad
+                        } else {
+                            onEliminar()  // cuando quede 1, lo saca del carrito
+                        }
+                    }
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Eliminar")
+                }
             }
         }
     }

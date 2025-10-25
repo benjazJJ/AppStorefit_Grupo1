@@ -84,6 +84,10 @@ interface UserDao {
     """
     )
     suspend fun adminListUsers(): List<AdminUserRow>
+
+    @Query("SELECT COUNT(*) FROM usuarios")
+    fun observeCount(): kotlinx.coroutines.flow.Flow<Int>
+
 }
 
 
