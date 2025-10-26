@@ -30,6 +30,9 @@ import com.example.appstorefit_grupo1.ui.components.SuccessCheckoutDialog
 import java.text.NumberFormat
 import java.util.Locale
 
+private const val COLOR_BLANCO = "Blanco con detalles negros"
+private const val COLOR_NEGRO  = "Negro con detalles blancos"
+
 @Composable
 fun CarritoScreen(navController: NavHostController) {
     val ctx = LocalContext.current
@@ -100,7 +103,7 @@ fun CarritoScreen(navController: NavHostController) {
                         talla = item.talla,
                         cantidad = item.cantidad,
                         precioUnitarioCLP = item.precioUnitario,
-                        imageRes = modeloToDrawable(item.modelo),
+                        imageRes = modeloToDrawable(item.modelo, item.color),
                         onSumar = {
                             vm.agregar(
                                 idCat = item.idCategoria,
@@ -137,9 +140,6 @@ fun CarritoScreen(navController: NavHostController) {
     }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Miniatura con fondo y borde (se mantiene tal cual)                        */
-/* -------------------------------------------------------------------------- */
 @Composable
 private fun ProductThumb(
     imageRes: Int,
@@ -191,13 +191,11 @@ private fun CarritoItemCard(
 
             Spacer(Modifier.width(12.dp))
 
-            // Columna central
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp)
             ) {
-                // Nombre
                 Text(
                     modelo,
                     style = MaterialTheme.typography.titleMedium,
@@ -205,7 +203,6 @@ private fun CarritoItemCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Talla en una sola línea
                 Text(
                     "Talla: $talla",
                     style = MaterialTheme.typography.bodySmall,
@@ -216,7 +213,6 @@ private fun CarritoItemCard(
 
                 Spacer(Modifier.height(4.dp))
 
-                // Controles - cantidad +
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FilledTonalButton(
                         onClick = onRestar,
@@ -236,7 +232,6 @@ private fun CarritoItemCard(
 
             Spacer(Modifier.width(8.dp))
 
-            // Precio + Eliminar (disminuye hasta 0 y elimina)
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = (precioUnitarioCLP * cantidad).toCLP(),
@@ -246,11 +241,7 @@ private fun CarritoItemCard(
 
                 TextButton(
                     onClick = {
-                        if (cantidad > 1) {
-                            onRestar()    // reduce 1 unidad
-                        } else {
-                            onEliminar()  // cuando quede 1, lo saca del carrito
-                        }
+                        if (cantidad > 1) onRestar() else onEliminar()
                     }
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null)
@@ -262,12 +253,22 @@ private fun CarritoItemCard(
     }
 }
 
-private fun modeloToDrawable(modelo: String): Int = when (modelo.uppercase()) {
-    "XFITRX"    -> R.drawable.polerastorefit
-    "WARMGLIDE" -> R.drawable.poleronstorefit
-    "FLEXRUN"   -> R.drawable.buzostorefit
-    "FITQUEEN"  -> R.drawable.topmujerstorefit
-    else        -> R.drawable.storefitlogo
+
+private fun modeloToDrawable(modelo: String, color: String): Int {
+    val m = modelo.trim()
+    val base = m.removePrefix("B").uppercase()
+
+    // Blanco si: color EXACTO "Blanco con detalles negros" o el modelo viene con prefijo B
+    val esBlanco = color.equals(COLOR_BLANCO, ignoreCase = true) ||
+            m.startsWith("B", ignoreCase = true)
+
+    return when (base) {
+        "XFITRX"    -> if (esBlanco) R.drawable.polerablancastorefit     else R.drawable.polerastorefit
+        "WARMGLIDE" -> if (esBlanco) R.drawable.poleronblancostorefit    else R.drawable.poleronstorefit
+        "FLEXRUN"   -> if (esBlanco) R.drawable.buzoblancostorefit       else R.drawable.buzostorefit
+        "FITQUEEN"  -> if (esBlanco) R.drawable.topmujerblancostorefit   else R.drawable.topmujerstorefit
+        else        -> R.drawable.storefitlogo
+    }
 }
 
 private fun Int.toCLP(): String {

@@ -19,16 +19,9 @@ class CarritoRepository(
     suspend fun countUnidades() = Result.success(carritoDao.countUnidades())
     suspend fun totalCLP() = Result.success(carritoDao.totalCLP())
 
-    private val coloresPermitidos = setOf(
-        "Blanco con detalles negros",
-        "Negro con detalles blancos"
-    )
-    private val tallasPermitidas = setOf("XS", "S", "M", "L", "XL")
+    //  Agrega 1 unidad de la variante indicada, validando que no supere el stock disponible.
+    //  Devuelve Result.success(Unit) si agregó; Result.failure con mensaje si no.
 
-    /**
-     * Agrega 1 unidad de la variante indicada, validando que no supere el stock disponible.
-     * Devuelve Result.success(Unit) si agregó; Result.failure con mensaje si no.
-     */
     suspend fun agregar(
         idCategoria: Long,
         idProducto: Long,
@@ -38,8 +31,8 @@ class CarritoRepository(
         precioUnitario: Int
     ): Result<Unit> {
         if (modelo.isBlank()) return Result.failure(IllegalArgumentException("Modelo requerido"))
-        if (color !in coloresPermitidos) return Result.failure(IllegalArgumentException("Color inválido"))
-        if (talla !in tallasPermitidas) return Result.failure(IllegalArgumentException("Talla inválida"))
+        if (color !in COLORES_PERMITIDOS) return Result.failure(IllegalArgumentException("Color inválido"))
+        if (talla !in TALLAS_PERMITIDAS) return Result.failure(IllegalArgumentException("Talla inválida"))
         if (precioUnitario < 0) return Result.failure(IllegalArgumentException("Precio inválido"))
 
         // Cantidad actual en carrito para esta variante
@@ -75,7 +68,7 @@ class CarritoRepository(
         return Result.success(Unit)
     }
 
-    /** Disminuye 1 unidad; si queda 0, elimina la variante. */
+    // Disminuye 1 unidad; si queda 0, elimina la variante.
     suspend fun disminuir(
         idCategoria: Long,
         idProducto: Long,
@@ -89,7 +82,7 @@ class CarritoRepository(
         return Result.success(Unit)
     }
 
-    /** Elimina completamente la variante. */
+    // Elimina completamente la variante
     suspend fun eliminar(
         idCategoria: Long,
         idProducto: Long,
@@ -103,9 +96,22 @@ class CarritoRepository(
         else Result.failure(IllegalStateException("No se pudo eliminar"))
     }
 
-    /** Vacía el carrito. */
+    //Vacia el carrito
     suspend fun limpiar(): Result<Unit> {
         carritoDao.clear()
         return Result.success(Unit)
+    }
+
+    companion object {
+        // Constantes permitidas
+        const val COLOR_BLANCO: String = "Blanco con detalles negros"
+        const val COLOR_NEGRO: String  = "Negro con detalles blancos"
+
+        val COLORES_PERMITIDOS: Set<String> = setOf(
+            COLOR_BLANCO,
+            COLOR_NEGRO
+        )
+
+        val TALLAS_PERMITIDAS: Set<String> = setOf("XS", "S", "M", "L", "XL")
     }
 }

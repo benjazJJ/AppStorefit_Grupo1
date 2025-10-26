@@ -218,7 +218,7 @@ abstract class AppDatabase : RoomDatabase() {
                     }
 
                     if (aInsertar.isNotEmpty()) {
-                        pDao.insertAll(aInsertar) // IGNORE por si aparece algún duplicado en carrera
+                        pDao.insertAll(aInsertar)
                     }
                 }
             }

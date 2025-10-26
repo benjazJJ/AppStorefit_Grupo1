@@ -56,8 +56,21 @@ fun DetalleProductoScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Flag para mostrar la animación de “añadido”
+    // Flag + trigger para la animación
     var mostrarAnimAdd by remember { mutableStateOf(false) }
+    var animTrigger by remember { mutableIntStateOf(0) }
+
+    //PARA QUE SE MUESTRE SIEMPRE LA ANIMACIÓN
+    LaunchedEffect(Unit) {
+        carritoVm.eventos.collect { msg ->
+            if (msg == "Agregado al carrito") {
+                animTrigger++          // nuevo disparo
+                mostrarAnimAdd = true  // asegurar que se muestre
+            } else {
+                snackbarHostState.showSnackbar(message = msg)
+            }
+        }
+    }
 
     // Escucha de eventos del VM (éxito/error al agregar)
     val evento = carritoVm.eventos.collectAsState(initial = null).value
@@ -291,12 +304,13 @@ fun DetalleProductoScreen(
     if (mostrarAnimAdd) {
         AddToCartDialog(
             message = "Producto añadido al carrito",
+            trigger = animTrigger,
             onDismiss = { mostrarAnimAdd = false }
         )
     }
 }
 
-/** Cuadrito de color seleccionable */
+// Cuadrito de color seleccionable
 @Composable
 private fun ColorSwatch(
     color: Color,

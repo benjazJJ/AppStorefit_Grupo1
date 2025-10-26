@@ -1,3 +1,4 @@
+// AddToCartDialog.kt
 package com.example.appstorefit_grupo1.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
@@ -19,9 +20,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun AddToCartDialog(
     message: String = "Producto añadido al carrito",
-    autoDismissMillis: Long = 900L,
+    trigger: Int,              //Cada vez que cambia reinicia para ver la animación
+    speed: Float = 2.8f,
+    minVisibleMillis: Long = 1200L,
+    extraHoldMillis: Long = 200L,
     onDismiss: () -> Unit
 ) {
+    val startTime = remember { System.currentTimeMillis() }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = MaterialTheme.shapes.medium, tonalElevation = 6.dp) {
             Column(
@@ -29,24 +35,36 @@ fun AddToCartDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                val composition by rememberLottieComposition(
-                    LottieCompositionSpec.RawRes(R.raw.anadircarrito) // tu json
-                )
-                val progress by animateLottieCompositionAsState(
-                    composition = composition,
-                    iterations = 1
-                )
-                LottieAnimation(
-                    composition = composition,
-                    progress = { progress },
-                    modifier = Modifier.size(120.dp)
-                )
+                // Reinicia composición/animación cuando cambia "trigger"
+                key(trigger) {
+                    val composition by rememberLottieComposition(
+                        LottieCompositionSpec.RawRes(R.raw.anadircarrito)
+                    )
+                    val animState = animateLottieCompositionAsState(
+                        composition = composition,
+                        iterations = 1,
+                        speed = speed
+                    )
+
+                    LottieAnimation(
+                        composition = composition,
+                        progress = { animState.progress },
+                        modifier = Modifier.size(120.dp)
+                    )
+
+                    // Cerrar cuando termine, respetando un mínimo visible
+                    LaunchedEffect(animState.progress) {
+                        if (animState.progress >= 1f) {
+                            val elapsed = System.currentTimeMillis() - startTime
+                            val waitMin = (minVisibleMillis - elapsed).coerceAtLeast(0)
+                            delay(waitMin + extraHoldMillis)
+                            onDismiss()
+                        }
+                    }
+                }
+
                 Text(text = message, style = MaterialTheme.typography.titleMedium)
             }
         }
-    }
-    LaunchedEffect(Unit) {
-        delay(autoDismissMillis)
-        onDismiss()
     }
 }
