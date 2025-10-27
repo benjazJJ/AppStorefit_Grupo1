@@ -81,16 +81,20 @@ dependencies {
 
     // PreviewView
     // Compose activity (para launchers)
-    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.activity:activity-compose:1.9.3")
 
     //Libreria Cache ( carga de imagenes en compose )
     implementation("io.coil-kt:coil-compose:2.7.0")
+
 
     //ANIMACIÓN TIPO SWEETALERT PARA INICIO DE SESIÓN EXITOSO
     implementation("com.airbnb.android:lottie-compose:6.5.0")
 
     //DEPENDENCIA PARA MANEJAR LA SESIÓN DEL USUARIO
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    //Dependencia para la galeria
+    implementation("androidx.activity:activity-ktx:1.9.3")
 
 
 }
