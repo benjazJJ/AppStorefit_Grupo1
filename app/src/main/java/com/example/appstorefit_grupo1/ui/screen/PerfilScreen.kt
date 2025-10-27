@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -29,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -114,7 +115,27 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // 3) Refresca datos y precarga la foto desde DB al entrar
+    // Launcher de Photo Picker (solo IMÁGENES)
+    val pickMediaLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val finalUri = uri.toString()
+            photoUriString = finalUri
+            Toast.makeText(context, "Foto seleccionada desde galería", Toast.LENGTH_SHORT).show()
+
+            val emailActual = SessionManager.user?.email
+            if (!emailActual.isNullOrBlank()) {
+                scope.launch {
+                    repo.saveUserPhoto(emailActual, finalUri)
+                    repo.refreshSessionUserByEmail(emailActual)
+                    user = SessionManager.user
+                }
+            }
+        }
+    }
+
+    // 3) Refresca datos al entrar
     LaunchedEffect(Unit) {
         val email = user?.email ?: return@LaunchedEffect
         val fresh = repo.refreshSessionUserByEmail(email)
@@ -142,9 +163,7 @@ fun PerfilScreen(navController: NavController) {
                     color = cs.primary,
                     contentColor = cs.onPrimary,
                     shape = MaterialTheme.shapes.small,
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(MaterialTheme.shapes.small)
+                    modifier = Modifier.size(10.dp)
                 ) {}
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -214,7 +233,7 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
-            // ── Tarjeta 2: Foto perfil (centrada y ordenada)
+            // ── Tarjeta 2: Foto perfil (con cambios de UI)
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
@@ -259,30 +278,7 @@ fun PerfilScreen(navController: NavController) {
                         )
                         Spacer(Modifier.height(14.dp))
 
-                        Button(
-                            onClick = {
-                                val file = createTempImageFile(context)
-                                val uri = getImageUriForFile(context, file)
-                                pendingCaptureUri = uri
-                                takePictureLauncher.launch(uri)
-                            }
-                        ) {
-                            Icon(Icons.Filled.CameraAlt, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Tomar foto")
-                        }
-                    } else {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(Uri.parse(photoUriString)).crossfade(true)
-                                .build(),
-                            contentDescription = "Foto de perfil",
-                            modifier = Modifier
-                                .size(140.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                        Spacer(Modifier.height(14.dp))
+                        //Fila con Cámara + Galería
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -299,11 +295,81 @@ fun PerfilScreen(navController: NavController) {
                             ) {
                                 Icon(Icons.Filled.CameraAlt, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text("Reemplazar")
+                                Text("Cámara")
                             }
                             OutlinedButton(
-                                onClick = { showDialog = true },
+                                onClick = {
+                                    pickMediaLauncher.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly // Solo imágenes
+                                        )
+                                    )
+                                },
                                 modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.Image, contentDescription = null) // ✅ CAMBIO
+                                Spacer(Modifier.width(8.dp))
+                                Text("Galería")
+                            }
+                        }
+                        // (No mostramos “Eliminar” porque no hay foto aún)
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(Uri.parse(photoUriString)).crossfade(true)
+                                .build(),
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier
+                                .size(140.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.height(14.dp))
+
+                        // ✅ CAMBIO: fila solo con Cámara + Galería
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Button(
+                                onClick = {
+                                    val file = createTempImageFile(context)
+                                    val uri = getImageUriForFile(context, file)
+                                    pendingCaptureUri = uri
+                                    takePictureLauncher.launch(uri)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.CameraAlt, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Cámara")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    pickMediaLauncher.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly // Solo imágenes
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.Image, contentDescription = null) // ✅ CAMBIO
+                                Spacer(Modifier.width(8.dp))
+                                Text("Galería")
+                            }
+                        }
+
+                        // Botón “Eliminar” debajo y centrado
+                        Spacer(Modifier.height(12.dp))
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            OutlinedButton(
+                                onClick = { showDialog = true },
+                                modifier = Modifier.widthIn(min = 180.dp) // para que se vea centrado y consistente
                             ) {
                                 Icon(Icons.Filled.Delete, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
