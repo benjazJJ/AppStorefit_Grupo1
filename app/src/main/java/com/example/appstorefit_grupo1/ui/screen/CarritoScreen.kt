@@ -4,10 +4,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +38,7 @@ import java.util.Locale
 private const val COLOR_BLANCO = "Blanco con detalles negros"
 private const val COLOR_NEGRO  = "Negro con detalles blancos"
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CarritoScreen(navController: NavHostController) {
     val ctx = LocalContext.current
@@ -43,6 +49,11 @@ fun CarritoScreen(navController: NavHostController) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     var mostrarDialogoExito by remember { mutableStateOf(false) }
+    // Abre/cierra el sheet de confirmación de compra
+    var mostrarCheckout by remember { mutableStateOf(false) }
+
+    // Sheet state recomendado (evita estado parcialmente expandido)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val evento = vm.eventos.collectAsState(initial = null).value
     LaunchedEffect(evento) {
@@ -71,7 +82,7 @@ fun CarritoScreen(navController: NavHostController) {
                         modifier = Modifier.weight(1f)
                     )
                     Button(
-                        onClick = { vm.onComprar() },
+                        onClick = { mostrarCheckout = true },
                         enabled = state.items.isNotEmpty(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -122,6 +133,65 @@ fun CarritoScreen(navController: NavHostController) {
                         }
                     )
                 }
+            }
+        }
+    }
+
+    // BottomSheet de confirmación de compra
+    if (mostrarCheckout) {
+        ModalBottomSheet(
+            onDismissRequest = { mostrarCheckout = false },
+            sheetState = sheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Confirmar compra",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                // Resumen simple
+                Text("Productos: ${state.items.size}")
+                Text("Total a pagar: ${state.totalCLP.toCLP()}", fontWeight = FontWeight.SemiBold)
+
+                // Lista rápida de productos
+                Divider()
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    state.items.forEach { it ->
+                        Text("• ${it.modelo} — Talla ${it.talla} × ${it.cantidad}")
+                    }
+                }
+                Divider()
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = { mostrarCheckout = false },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Cancelar") }
+
+                    Button(
+                        onClick = {
+                            // Ejecuta la compra real
+                            mostrarCheckout = false
+                            vm.onComprar()
+                            // El LaunchedEffect(evento) mostrará snackbar + SuccessCheckoutDialog
+                        },
+                        enabled = state.items.isNotEmpty(),
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Confirmar compra") }
+                }
+
+                Spacer(Modifier.height(8.dp))
             }
         }
     }
@@ -252,7 +322,6 @@ private fun CarritoItemCard(
         }
     }
 }
-
 
 private fun modeloToDrawable(modelo: String, color: String): Int {
     val m = modelo.trim()
