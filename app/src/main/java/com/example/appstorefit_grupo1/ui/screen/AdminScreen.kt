@@ -197,10 +197,6 @@ private fun AdminUsuariosTab() {
                                     IconButton(onClick = { vm.abrirAsignarRol(row.rut) }) {
                                         Icon(Icons.Filled.Badge, contentDescription = "Asignar rol")
                                     }
-                                    // ELIMINAR
-                                    IconButton(onClick = { vm.solicitarEliminar(row.rut) }) {
-                                        Icon(Icons.Filled.Delete, contentDescription = "Eliminar")
-                                    }
                                 }
                             }
                         )
@@ -210,16 +206,6 @@ private fun AdminUsuariosTab() {
         }
     }
 
-    // Confirmación eliminar
-    estado.rutAConfirmarEliminacion?.let { rutToDelete ->
-        AlertDialog(
-            onDismissRequest = { vm.cancelarEliminar() },
-            title = { Text("Eliminar usuario") },
-            text = { Text("¿Eliminar definitivamente el usuario con RUT $rutToDelete?") },
-            confirmButton = { TextButton(onClick = { vm.confirmarEliminar() }) { Text("Eliminar") } },
-            dismissButton = { TextButton(onClick = { vm.cancelarEliminar() }) { Text("Cancelar") } }
-        )
-    }
 
     // Editar usuario (fecha de nacimiento y dirección bloqueadas por política)
     if (estado.mostrarEditar) {
@@ -276,7 +262,7 @@ private fun AdminUsuariosTab() {
                     // BLOQUEADOS POR POLÍTICA
                     OutlinedTextField(
                         value = estado.eDireccion2,
-                        onValueChange = { /* nada */ },
+                        onValueChange = { },
                         label = { Text("Dirección (no editable)") },
                         singleLine = true,
                         enabled = false,
@@ -285,7 +271,7 @@ private fun AdminUsuariosTab() {
 
                     OutlinedTextField(
                         value = estado.eNacimiento2,
-                        onValueChange = { /* nada */ },
+                        onValueChange = { },
                         label = { Text("Fecha de nacimiento (no editable)") },
                         singleLine = true,
                         enabled = false,
@@ -374,17 +360,17 @@ private fun AdminProductosTab() {
 
     var editing by remember { mutableStateOf<ProductosEntity?>(null) }
 
-    // --- Controles de filtro/búsqueda ---
+    //Controles de filtro/búsqueda
     var search by remember { mutableStateOf("") }
     // null = Todas las categorías
     var selectedCat: Long? by remember { mutableStateOf(null) }
 
-    // categorías detectadas desde los datos (solo IDs que tienes hoy)
+    // categorías detectadas desde los datos
     val categoriasIds = remember(productos) {
         productos.map { it.idCategoria }.distinct().sorted()
     }
 
-    // --- Filtrado + búsqueda ---
+    // Filtrado + búsqueda
     val filtrados = remember(productos, selectedCat, search) {
         val s = search.trim()
         productos
@@ -401,7 +387,7 @@ private fun AdminProductosTab() {
             .toList()
     }
 
-    // --- Agrupación por modelo (por categoría+marca+modelo) ---
+    //Agrupación por modelo (por categoría+marca+modelo)
     val grupos = remember(filtrados) {
         filtrados.groupBy { Triple(it.idCategoria, it.marca, it.modelo) }
             .toSortedMap(compareBy<Triple<Long, String, String>>({ it.first }, { it.third }))
@@ -420,7 +406,6 @@ private fun AdminProductosTab() {
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Catálogo de productos", style = MaterialTheme.typography.titleMedium)
-            // Sin botón "Nuevo producto" (lo pediste)
         }
 
         // Error (si hay)
@@ -755,7 +740,7 @@ private fun AdminCategoriasTab() {
         }
     }
 
-    // Diálogo para renombrar (sin eliminar)
+    // Diálogo para renombrar
     renaming?.let { (id, actual) ->
         var nuevo by remember(id) { mutableStateOf(actual) }
         var errorLocal by remember { mutableStateOf<String?>(null) }
@@ -940,7 +925,7 @@ private fun CrearUsuarioDialog(
                 OutlinedTextField(
                     value = estado.cTelefono,
                     onValueChange = vm::onCambiarTelefonoCrear,
-                    label = { Text("Teléfono (opcional)") },
+                    label = { Text("Teléfono") },
                     singleLine = true,
                     isError = estado.errTelefono != null
                 )
@@ -949,7 +934,7 @@ private fun CrearUsuarioDialog(
                 OutlinedTextField(
                     value = estado.cDireccion,
                     onValueChange = vm::onCambiarDireccionCrear,
-                    label = { Text("Dirección (opcional)") },
+                    label = { Text("Dirección") },
                     singleLine = true
                 )
 
@@ -970,7 +955,7 @@ private fun CrearUsuarioDialog(
                     OutlinedTextField(
                         modifier = Modifier.menuAnchor(),
                         value = estado.cRolNombreSeleccionado ?: "",
-                        onValueChange = { /* solo via dropdown */ },
+                        onValueChange = { },
                         readOnly = true,
                         label = { Text("Rol") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rolesExpanded) },
