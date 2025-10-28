@@ -20,6 +20,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
+import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeDao
+import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeEntity
+import kotlinx.coroutines.runBlocking
+
+
 
 @Database(
     entities = [
@@ -28,9 +33,10 @@ import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
         RolEntity::class,
         CategoriaEntity::class,
         ProductosEntity::class,
-        CarritoEntity::class
+        CarritoEntity::class,
+        MensajeEntity::class
     ],
-    version = 33,
+    version = 34,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -40,6 +46,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoriaDao(): CategoriaDao
     abstract fun productosDao(): ProductosDao
     abstract fun carritoDao(): CarritoDao
+    abstract fun mensajeDao(): MensajeDao
+
 
     private class SeedCallback(
         private val scope: CoroutineScope,
@@ -51,6 +59,8 @@ abstract class AppDatabase : RoomDatabase() {
             scope.launch(Dispatchers.IO) { seed() }
         }
 
+
+
         private suspend fun seed() {
             val appDb = provider() ?: return
             val rDao = appDb.rolDao()
@@ -59,14 +69,14 @@ abstract class AppDatabase : RoomDatabase() {
             val cDao = appDb.categoriaDao()
             val pDao = appDb.productosDao()
 
-            // --- Roles ---
+            //Roles
             if (kotlin.runCatching { rDao.count() }.getOrDefault(0) == 0) {
                 rDao.insert(RolEntity(rolId = 1L, nombreRol = "CLIENTE"))
                 rDao.insert(RolEntity(rolId = 2L, nombreRol = "ADMIN"))
                 rDao.insert(RolEntity(rolId = 3L, nombreRol = "SOPORTE"))
             }
 
-            // --- Usuarios + Registro  ---
+            //Usuarios + Registro
             suspend fun ensureUser(
                 email: String,
                 rut: String,
@@ -100,8 +110,11 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
-            ensureUser("a@a.cl", "11.111.111-1", "Admin", "Admin123!", 2L, telefono = "941827012")
-            ensureUser("b@b.cl", "22.222.222-2", "Jose",  "Jose123!",  1L, telefono = "941827013")
+            //USUARIOS PRECARGADOS PARA TESTEAR
+            ensureUser("a@a.cl", "11.111.111-1", "Admin", "Admin123!", 2L, telefono = "941827012") //ADMINISTRADOR
+            ensureUser("b@b.cl", "22.222.222-2", "Jose",  "Jose123!",  1L, telefono = "941827013") //CLIENTE
+            ensureUser("s@s.cl", "33.333.333-3", "Soporte", "Soporte123!", 3L, telefono = "941827014") //SOPORTE
+
 
             // --- Categorías ---
             if (kotlin.runCatching { cDao.count() }.getOrDefault(0) == 0) {
@@ -111,7 +124,7 @@ abstract class AppDatabase : RoomDatabase() {
                 cDao.insert(CategoriaEntity(nombre = "Conjunto Femenino"))
             }
 
-            // --- Productos (exactamente 4, uno por categoría) ---
+            //Productos (exactamente 4, uno por categoría)
             val hayProductos = kotlin.runCatching { pDao.count() }.getOrDefault(0) > 0
             if (!hayProductos) {
                 data class ProdBase(val idCat: Long, val modelo: String, val precio: Int)
@@ -143,7 +156,7 @@ abstract class AppDatabase : RoomDatabase() {
                 }
             }
 
-            // --- Variantes por modelo: Negro/Blanco x XS..XL (idempotente) ---
+            //Variantes por modelo: Negro/Blanco x XS..XL
             run {
                 val tallas = listOf("XS","S","M","L","XL")
                 val COLOR_NEGRO  = "Negro con detalles blancos"

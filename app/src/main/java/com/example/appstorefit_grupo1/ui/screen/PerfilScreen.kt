@@ -37,9 +37,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.appstorefit_grupo1.ViewModel.MensajesViewModel
+import com.example.appstorefit_grupo1.ViewModel.MensajesViewModelFactory
 import com.example.appstorefit_grupo1.ui.components.CampoReadOnlyDegradado
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.UserRepository
@@ -54,6 +58,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
+
 //Helpers de cámara
 private fun createTempImageFile(context: Context): File {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -66,6 +72,12 @@ private fun getImageUriForFile(context: Context, file: File): Uri {
     return FileProvider.getUriForFile(context, authority, file)
 }
 
+// Convierte el RUT a un Long estable para usar como senderUserId
+private fun rutToStableLong(rut: String): Long {
+    val onlyDigits = rut.filter { it.isDigit() }
+    return onlyDigits.toLongOrNull() ?: rut.hashCode().toLong()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(navController: NavController) {
@@ -75,6 +87,11 @@ fun PerfilScreen(navController: NavController) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val mensajesVm: MensajesViewModel = viewModel (factory = MensajesViewModelFactory(context))
+    val envio by mensajesVm.envio.collectAsStateWithLifecycle()
+    var mensajeTexto by rememberSaveable { mutableStateOf("") }
+
 
     val db = remember { AppDatabase.getInstance(context) }
     val repo = remember {
@@ -144,6 +161,22 @@ fun PerfilScreen(navController: NavController) {
             if (photoUriString.isNullOrBlank()) photoUriString = fresh.photoUri
         }
     }
+
+    // Feedback de envío de mensaje
+    LaunchedEffect(envio.ok, envio.error) {
+        when {
+            envio.ok -> {
+                Toast.makeText(context, "Mensaje enviado a Soporte", Toast.LENGTH_SHORT).show()
+                mensajesVm.limpiarEstadoEnvio()
+                mensajeTexto = ""
+            }
+            envio.error != null -> {
+                Toast.makeText(context, envio.error ?: "Error al enviar", Toast.LENGTH_SHORT).show()
+                mensajesVm.limpiarEstadoEnvio()
+            }
+        }
+    }
+
 
     // Badget de rol
     @Composable
@@ -326,7 +359,7 @@ fun PerfilScreen(navController: NavController) {
                         )
                         Spacer(Modifier.height(14.dp))
 
-                        // ✅ CAMBIO: fila solo con Cámara + Galería
+                        //fila solo con Cámara + Galería
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -355,7 +388,7 @@ fun PerfilScreen(navController: NavController) {
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Icon(Icons.Filled.Image, contentDescription = null) // ✅ CAMBIO
+                                Icon(Icons.Filled.Image, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
                                 Text("Galería")
                             }
@@ -469,6 +502,47 @@ fun PerfilScreen(navController: NavController) {
             ) {
                 Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge)
             }
+
+            // Contactar Soporte (solo si el rol es CLIENTE = 1L)
+            if (roleId == 1L) {
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Contactar Soporte", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = mensajeTexto,
+                            onValueChange = { mensajeTexto = it },
+                            label = { Text("Escribe tu mensaje") },
+                            minLines = 3,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val uSafe = user ?: return@Button
+                                val senderId = rutToStableLong(uSafe.rut)
+                                mensajesVm.enviarMensaje(
+                                    idUsuarioRemitente = senderId,
+                                    idRolDestinoSoporte = 3, // SOPORTE
+                                    contenido = mensajeTexto
+                                )
+                            },
+                            enabled = mensajeTexto.isNotBlank() && !envio.enviando,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Text(if (envio.enviando) "Enviando..." else "Enviar a Soporte")
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
         }
     }
 }

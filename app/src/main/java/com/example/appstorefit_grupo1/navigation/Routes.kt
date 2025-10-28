@@ -15,7 +15,10 @@ sealed class Route(val path: String){
     data object Perfil           : Route("perfil")           // Ruta para perfil screen
     data object EditarContrasena : Route("editarContrasena") // Ruta para editar contraseña screen
 
-    data object Panel            : Route("panel")
+    data object Panel            : Route("panel") // Ruta para panel admin
+
+    data object Soporte          : Route("soporte") //Ruta para el admin
+
 
     data object DetalleProducto  : Route("detalleProducto") {
         fun create(idCategoria: Long, modelo: String): String =

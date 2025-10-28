@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
@@ -37,20 +38,24 @@ private data class TopDest(
 )
 
 //construimos el menú según el rol
+//construimos el menú según el rol
 private fun topDestinationsFor(roleId: Long?): List<TopDest> {
     val common = listOf(
         TopDest(Route.Productos.path, "Productos", Icons.Filled.Home),
         TopDest(Route.Carrito.path,   "Carrito",   Icons.Filled.ShoppingCart),
         TopDest(Route.Perfil.path,    "Perfil",    Icons.Filled.Person)
     )
-    return if (roleId == 2L) { // 2L = ADMIN (ajusta si tu BD usa otro id)
-        listOf(
-            TopDest(Route.Panel.path, "Panel", Icons.Filled.Person) // puedes cambiar el ícono si prefieres
+    return when (roleId) {
+        2L -> listOf( // ADMIN
+            TopDest(Route.Panel.path, "Panel", Icons.Filled.Person)
         ) + common
-    } else {
-        common
+        3L -> common + listOf( // SOPORTE
+            TopDest(Route.Soporte.path, "Soporte", Icons.Filled.Message)
+        )
+        else -> common // CLIENTE u otro
     }
 }
+
 
 @Composable
 fun AppNavGraph(
@@ -169,7 +174,6 @@ private fun GraphHost(
             )
         }
 
-
         // Register
         composable(Route.Register.path) {
             RegisterScreenVm(
@@ -198,6 +202,11 @@ private fun GraphHost(
         // Perfil
         composable(Route.Perfil.path) {
             PerfilScreen(navController = navController)
+        }
+
+        // Soporte (solo lectura; la pantalla valida el rol internamente)
+        composable(Route.Soporte.path) {
+            SoporteScreen()
         }
 
         // Editar contraseña
