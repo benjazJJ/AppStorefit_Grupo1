@@ -26,9 +26,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.appstorefit_grupo1.data.repository.ItemCarritoSnapshot
+import com.example.appstorefit_grupo1.session.SessionManager
+import kotlinx.coroutines.launch
 import com.example.appstorefit_grupo1.R
 import com.example.appstorefit_grupo1.ViewModel.CarritoViewModel
 import com.example.appstorefit_grupo1.ViewModel.CarritoViewModelFactory
+import com.example.appstorefit_grupo1.ViewModel.ComprasViewModel
+import com.example.appstorefit_grupo1.ViewModel.ComprasViewModelFactory
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.navigation.Route
 import com.example.appstorefit_grupo1.ui.components.SuccessCheckoutDialog
@@ -45,9 +50,12 @@ fun CarritoScreen(navController: NavHostController) {
 
     val carritoDao = remember { AppDatabase.getInstance(ctx).carritoDao() }
     val vm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(ctx, carritoDao))
+    // VM de Compras para registrar la compra en BD
+    val comprasVm: ComprasViewModel = viewModel(factory = ComprasViewModelFactory(ctx))
     val state by vm.uiState.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var mostrarDialogoExito by remember { mutableStateOf(false) }
     // Abre/cierra el sheet de confirmación de compra
     var mostrarCheckout by remember { mutableStateOf(false) }
@@ -181,10 +189,29 @@ fun CarritoScreen(navController: NavHostController) {
 
                     Button(
                         onClick = {
-                            // Ejecuta la compra real
                             mostrarCheckout = false
-                            vm.onComprar()
-                            // El LaunchedEffect(evento) mostrará snackbar + SuccessCheckoutDialog
+
+                            val rut = SessionManager.user?.rut
+                            if (rut.isNullOrBlank()) {
+                                scope.launch {                       // <-- lanzar corrutina
+                                    snackbarHostState.showSnackbar("Inicia sesión para comprar")
+                                }
+                                return@Button
+                            }
+
+                            val itemsSnapshot = state.items.map { it ->
+                                ItemCarritoSnapshot(
+                                    idProducto = it.idProducto,
+                                    nombreProducto = "${it.modelo} (${it.color}) T${it.talla}",
+                                    cantidad = it.cantidad,
+                                    precioUnitario = it.precioUnitario
+                                )
+                            }
+
+                            // Registrar compra y luego continuar con tu flujo actual
+                            comprasVm.registrarCompra(rut, itemsSnapshot) {
+                                vm.onComprar()
+                            }
                         },
                         enabled = state.items.isNotEmpty(),
                         modifier = Modifier.weight(1f)

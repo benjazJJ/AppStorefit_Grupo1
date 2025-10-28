@@ -1,5 +1,6 @@
 package com.example.appstorefit_grupo1.navigation
 
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,6 +56,8 @@ private fun topDestinationsFor(roleId: Long?): List<TopDest> {
         else -> common // CLIENTE u otro
     }
 }
+
+
 
 
 @Composable
@@ -202,6 +205,11 @@ private fun GraphHost(
         // Perfil
         composable(Route.Perfil.path) {
             PerfilScreen(navController = navController)
+        }
+
+        // Historial de compras (se abre desde Perfil)
+        composable(Route.HistorialCompras.path) {
+            HistorialComprasScreen(navController)
         }
 
         // Soporte (solo lectura; la pantalla valida el rol internamente)

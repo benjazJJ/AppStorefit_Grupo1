@@ -482,6 +482,23 @@ fun PerfilScreen(navController: NavController) {
 
             Spacer(Modifier.height(16.dp))
 
+            // ---- Botón para ver historial de compras ----
+            Button(
+                onClick = { navController.navigate(Route.HistorialCompras.path) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Historial de compras", style = MaterialTheme.typography.labelLarge)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             Button(
                 onClick = {
                     SessionManager.user = null

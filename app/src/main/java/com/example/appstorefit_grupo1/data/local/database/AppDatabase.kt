@@ -18,8 +18,11 @@ import com.example.appstorefit_grupo1.data.local.user.UserEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.appstorefit_grupo1.data.local.Compras.CompraEntity
+import com.example.appstorefit_grupo1.data.local.Compras.CompraDetalleEntity
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoDao
 import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
+import com.example.appstorefit_grupo1.data.local.Compras.CompraDao
 import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeDao
 import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeEntity
 import kotlinx.coroutines.runBlocking
@@ -34,7 +37,9 @@ import kotlinx.coroutines.runBlocking
         CategoriaEntity::class,
         ProductosEntity::class,
         CarritoEntity::class,
-        MensajeEntity::class
+        MensajeEntity::class,
+        CompraEntity::class,
+        CompraDetalleEntity::class
     ],
     version = 34,
     exportSchema = true
@@ -47,6 +52,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun productosDao(): ProductosDao
     abstract fun carritoDao(): CarritoDao
     abstract fun mensajeDao(): MensajeDao
+
+    abstract fun compraDao(): CompraDao
 
 
     private class SeedCallback(

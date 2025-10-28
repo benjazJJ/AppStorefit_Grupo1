@@ -13,6 +13,7 @@ sealed class Route(val path: String){
     data object Productos        : Route("productos")        // Ruta para productos screen
     data object Carrito          : Route("carrito")          // Ruta para carrito screen
     data object Perfil           : Route("perfil")           // Ruta para perfil screen
+    data object HistorialCompras : Route("historial_compras")
     data object EditarContrasena : Route("editarContrasena") // Ruta para editar contraseña screen
 
     data object Panel            : Route("panel") // Ruta para panel admin
@@ -24,4 +25,6 @@ sealed class Route(val path: String){
         fun create(idCategoria: Long, modelo: String): String =
             "detalleProducto?idCategoria=$idCategoria&modelo=${Uri.encode(modelo)}"
     }
+
+
 }
