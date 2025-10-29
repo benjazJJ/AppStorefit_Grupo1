@@ -14,7 +14,6 @@ Aplicación móvil de **e-commerce deportivo** para la marca **StoreFit**. Permi
 ---
 
 ## 📚 Índice
-- [Demo / Capturas](#-demo--capturas)
 - [Características](#-características)
 - [Arquitectura](#-arquitectura)
 - [Stack & Requisitos](#-stack--requisitos)
