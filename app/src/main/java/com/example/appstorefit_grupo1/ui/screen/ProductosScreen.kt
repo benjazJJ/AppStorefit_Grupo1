@@ -31,7 +31,7 @@ import java.util.Locale
 
 data class ProductoCardData(
     val idCategoria: Long,
-    val modeloBase: String,  // sin prefijo B
+    val modeloBase: String,
     val nombre: String,
     val precio: Int,
     val imagenRes: Int,
@@ -72,8 +72,7 @@ fun ProductosScreen(
             repo.getAll().getOrDefault(emptyList())
         }
 
-        // Tomamos solo los modelos que quieres mostrar en catálogo (tus 4)
-        // Si mañana agregas más, puedes construir esta lista dinámicamente por categoría.
+        // Tomamos solo los modelos a mostrar en catálogo (4)
         val modelosCatalogo = listOf(
             1L to "XFITRX",
             3L to "FLEXRUN",
@@ -164,7 +163,7 @@ fun ProductosScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
 
-                        // Estado de stock (cualquier variante del modelo)
+                        // Estado de stock
                         val stockText = if (p.hayStock) "Stock disponible" else "Sin stock"
                         val stockColor = if (p.hayStock) {
                             MaterialTheme.colorScheme.onSurfaceVariant

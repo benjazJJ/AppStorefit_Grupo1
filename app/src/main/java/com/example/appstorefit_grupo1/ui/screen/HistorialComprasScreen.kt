@@ -1,7 +1,5 @@
 package com.example.appstorefit_grupo1.ui.screen
 
-
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -105,7 +103,7 @@ fun HistorialComprasScreen(navController: NavHostController) {
 
                         val brush = if (index % 2 == 0) grad1 else grad2
 
-                        // Contenedor con borde degradado (misma estética de tus campos en Perfil)
+                        // Contenedor con borde degradado
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()

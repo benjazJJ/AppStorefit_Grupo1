@@ -39,8 +39,8 @@ import com.example.appstorefit_grupo1.ui.components.SuccessLoginDialog
 @Composable
 fun LoginScreenVm(
     widthClass: WindowWidthSizeClass,
-    onLoginOkNavigateHome: () -> Unit,      // Productos
-    onLoginOkNavigateAdmin: () -> Unit,     // Panel
+    onLoginOkNavigateHome: () -> Unit,
+    onLoginOkNavigateAdmin: () -> Unit,
     onGoRegister: () -> Unit
 ) {
     val context = LocalContext.current
@@ -180,7 +180,7 @@ private fun LoginScreen(
                 )
                 Spacer(Modifier.height(20.dp))
 
-                // -------- Email ----------
+                // Email
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
@@ -215,7 +215,7 @@ private fun LoginScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                // -------- Contraseña ----------
+                // Contraseña
                 OutlinedTextField(
                     value = pass,
                     onValueChange = onPassChange,

@@ -25,7 +25,7 @@ import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
 import com.example.appstorefit_grupo1.data.local.Compras.CompraDao
 import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeDao
 import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeEntity
-import kotlinx.coroutines.runBlocking
+
 
 
 
@@ -123,7 +123,7 @@ abstract class AppDatabase : RoomDatabase() {
             ensureUser("s@s.cl", "33.333.333-3", "Soporte", "Soporte123!", 3L, telefono = "941827014") //SOPORTE
 
 
-            // --- Categorías ---
+            // Categorías
             if (kotlin.runCatching { cDao.count() }.getOrDefault(0) == 0) {
                 cDao.insert(CategoriaEntity(nombre = "Poleras"))
                 cDao.insert(CategoriaEntity(nombre = "Poleron"))

@@ -57,10 +57,10 @@ fun CarritoScreen(navController: NavHostController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var mostrarDialogoExito by remember { mutableStateOf(false) }
-    // Abre/cierra el sheet de confirmación de compra
+    // Abre y cierra el sheet de confirmación de compra
     var mostrarCheckout by remember { mutableStateOf(false) }
 
-    // Sheet state recomendado (evita estado parcialmente expandido)
+    // Sheet state evita estado parcialmente expandido
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val evento = vm.eventos.collectAsState(initial = null).value
@@ -193,7 +193,7 @@ fun CarritoScreen(navController: NavHostController) {
 
                             val rut = SessionManager.user?.rut
                             if (rut.isNullOrBlank()) {
-                                scope.launch {                       // <-- lanzar corrutina
+                                scope.launch {                       //
                                     snackbarHostState.showSnackbar("Inicia sesión para comprar")
                                 }
                                 return@Button
@@ -208,7 +208,7 @@ fun CarritoScreen(navController: NavHostController) {
                                 )
                             }
 
-                            // Registrar compra y luego continuar con tu flujo actual
+                            // Registrar compra y luego continuar
                             comprasVm.registrarCompra(rut, itemsSnapshot) {
                                 vm.onComprar()
                             }

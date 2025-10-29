@@ -6,17 +6,17 @@ import androidx.room.*
 @Dao
 interface CompraDao {
 
-    // --- INSERTAR SOLO LA CABECERA (una compra) ---
+    // INSERTAR SOLO LA CABECERA (una compra)
     // Devuelve el id autogenerado (idCompra) que creó SQLite.
     @Insert
     suspend fun insertCompra(compra: CompraEntity): Long
 
-    // --- INSERTAR MUCHOS DETALLES DE UNA VEZ ---
+    //INSERTAR MUCHOS DETALLES DE UNA VEZ
     @Insert
     suspend fun insertDetalles(detalles: List<CompraDetalleEntity>)
 
-    // --- TRANSACCIÓN: crear compra + sus detalles juntos ---
-    // Si algo falla, se deshace todo. Si sale bien, quedan ambos grabados.
+    //TRANSACCIÓN: crear compra + sus detalles juntos
+    // Si algo falla, se deshace tod0 Si sale bien, quedan ambos grabados.
     @Transaction
     suspend fun insertCompraConDetalles(
         compra: CompraEntity,
@@ -34,16 +34,16 @@ interface CompraDao {
         return idCompra
     }
 
-    // --- HISTORIAL POR USUARIO (RUT) ---
+    // HISTORIAL POR USUARIO (RUT)
     // Trae una lista de "CompraConDetalles" (compra + sus líneas).
     // ORDER BY fechaMillis DESC = primero las compras más recientes.
     @Transaction
     @Query("SELECT * FROM compra WHERE rutUsuario = :rut ORDER BY fechaMillis DESC")
     suspend fun getComprasPorRut(rut: String): List<CompraConDetalles>
 
-    // --- TOTAL GASTADO POR USUARIO ---
+    //TOTAL GASTADO POR USUARIO
     // Suma (cantidad * precioUnitario) de todas las compras de ese RUT.
-    // IFNULL(...) evita que sea null cuando no hay compras (devuelve 0).
+    // IFNULL evita que sea null cuando no hay compras (devuelve 0).
     @Query("""
         SELECT IFNULL(SUM(d.cantidad * d.precioUnitario), 0)
         FROM compra c

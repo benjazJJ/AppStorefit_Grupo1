@@ -64,7 +64,7 @@ class AuthViewModel(
     private val _register = MutableStateFlow(RegisterUiState())
     val register: StateFlow<RegisterUiState> = _register
 
-    // ---------- LOGIN ----------
+    // LOGIN
     fun onLoginEmailChange(value: String) {
         _login.update { it.copy(email = value, emailError = validateEmail(value)) }
         recomputeLoginCanSubmit()

@@ -9,7 +9,7 @@ interface ProductosDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(product: ProductosEntity): Long
 
-    // NUEVO: inserción masiva idempotente (evita duplicados)
+    // Inserción masiva idempotente (evita duplicados)
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(productos: List<ProductosEntity>): List<Long>
 
@@ -68,7 +68,7 @@ interface ProductosDao {
         modelo: String
     ): List<ProductosEntity>
 
-    // NUEVO: trae 1 variante exacta por modelo+color+talla
+    // Trae 1 variante exacta por modelo+color+talla
     @Query("""
         SELECT * FROM producto
         WHERE id_categoria = :idCategoria

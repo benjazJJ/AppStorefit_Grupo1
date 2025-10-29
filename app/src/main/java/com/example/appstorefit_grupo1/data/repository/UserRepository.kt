@@ -17,7 +17,7 @@ class UserRepository(
     private val rolDao: com.example.appstorefit_grupo1.data.local.rol.RolDao
 ) {
 
-    // ================== INICIO DE SESIÓN ==================
+    //INICIO DE SESIÓN
     suspend fun login(email: String, pass: String): Result<UserEntity> {
         val correoCanonico = emailCanonico(email)
         val registro = registroDao.getByUsuario(correoCanonico)
@@ -35,7 +35,7 @@ class UserRepository(
         return Result.success(user)
     }
 
-    // ================== REGISTRO ==================
+    // REGISTRO
     suspend fun register(
         rut: String,
         name: String,
@@ -104,7 +104,7 @@ class UserRepository(
         )
     }
 
-    // ================== CHEQUEOS DE UNICIDAD ==================
+    // CHEQUEOS DE UNICIDAD
     suspend fun isEmailTaken(email: String): Boolean {
         val canon = emailCanonico(email)
         if (canon.isBlank()) return false
@@ -122,7 +122,7 @@ class UserRepository(
         return userDao.existsPhone(p) > 0
     }
 
-    // ================== CONTRASEÑA ==================
+    // CONTRASEÑA
     suspend fun changePassword(
         email: String,
         oldPass: String,
@@ -151,7 +151,7 @@ class UserRepository(
         else Result.failure(IllegalStateException("No se pudo actualizar la contraseña"))
     }
 
-    // ================== PERFIL ==================
+    // PERFIL
     suspend fun updateAddressByEmail(email: String, newAddress: String): Result<Unit> {
         val correoCanonico = emailCanonico(email)
         val user = userDao.getByEmail(correoCanonico)
@@ -240,7 +240,7 @@ class UserRepository(
     }
 
     suspend fun adminUpdateUser(user: UserEntity): Result<Unit> = runCatching {
-        // Update PARCIAL: nombre, email, teléfono (NO toca dirección ni nacimiento)
+        // Update PARCIAL: nombre, email, teléfono (NO tocamos dirección ni nacimiento)
         val correoCanon = emailCanonico(user.email)
         val phoneCanon  = user.phone?.filter { it.isDigit() }
         val rows = userDao.adminUpdateEditable(

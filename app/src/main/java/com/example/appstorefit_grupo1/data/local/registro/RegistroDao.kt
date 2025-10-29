@@ -25,11 +25,11 @@ interface RegistroDao {
 
     //MÉTODOS PARA PANEL ADMIN
 
-    /** Elimina la fila de registro asociada al RUT. */
+    //Elimina la fila de registro asociada al RUT
     @Query("DELETE FROM registro WHERE rut = :rut")
     suspend fun deleteByRut(rut: String): Int
 
-    /** Actualiza el rol (columna rol_id) del usuario asociado al RUT. */
+    // Actualiza el rol (columna rol_id) del usuario asociado al RUT
     @Query("UPDATE registro SET rol_id = :roleId WHERE rut = :rut")
     suspend fun updateRoleByRut(rut: String, roleId: Long): Int
 

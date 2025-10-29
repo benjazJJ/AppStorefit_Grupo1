@@ -31,7 +31,7 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState
 
-/* ---------- VM Wrapper ---------- */
+// VM Wrapper
 @Composable
 fun RegisterScreenVm(
     widthClass: WindowWidthSizeClass,
@@ -81,7 +81,7 @@ fun RegisterScreenVm(
     )
 }
 
-/* ---------- Mismo look & feel que Login ---------- */
+// Mismo look & feel que Login
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RegisterScreen(
@@ -154,7 +154,7 @@ private fun RegisterScreen(
                     color = cs.onSurface
                 )
 
-                /* RUT */
+                // RUT
                 val isRutTaken = errorMsg == "RUT ya registrado"
                 OutlinedTextField(
                     value = rut,
@@ -166,7 +166,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(rutError ?: (if (isRutTaken) "RUT ya registrado" else null))
 
-                /* Nombre */
+                // Nombre
                 OutlinedTextField(
                     value = name,
                     onValueChange = onNameChange,
@@ -177,7 +177,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(nameError)
 
-                /* Email */
+                // Email
                 val isEmailTaken = errorMsg == "Correo ya registrado"
                 OutlinedTextField(
                     value = email,
@@ -190,7 +190,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(emailError ?: (if (isEmailTaken) "Correo ya registrado" else null))
 
-                /* Teléfono */
+                // Teléfono
                 val isPhoneTaken = errorMsg == "Este teléfono ya pertenece a otro usuario."
                 OutlinedTextField(
                     value = phone,
@@ -203,7 +203,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(phoneError ?: (if (isPhoneTaken) "Este teléfono ya pertenece a otro usuario." else null))
 
-                /* Dirección */
+                // Dirección
                 OutlinedTextField(
                     value = address,
                     onValueChange = onAddressChange,
@@ -216,7 +216,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(addressError)
 
-                //Fecha de nacimiento
+                // Fecha de nacimiento
                 Box(modifier = Modifier.fillMaxWidth()) {
 
                     OutlinedTextField(
@@ -263,7 +263,7 @@ private fun RegisterScreen(
                 }
 
 
-                /* Contraseña */
+                // Contraseña
                 OutlinedTextField(
                     value = pass,
                     onValueChange = onPassChange,
@@ -283,7 +283,7 @@ private fun RegisterScreen(
                 )
                 AnimatedError(passError)
 
-                /* Confirmación */
+                // Confirmación
                 OutlinedTextField(
                     value = confirm,
                     onValueChange = onConfirmChange,

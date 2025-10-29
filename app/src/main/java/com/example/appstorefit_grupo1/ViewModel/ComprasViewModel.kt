@@ -21,24 +21,12 @@ class ComprasViewModel(
     private val _totalGastado = MutableStateFlow(0)
     val totalGastado: StateFlow<Int> = _totalGastado
 
-    /**
-     * Lee desde la BD:
-     * - Toda la lista de compras (con detalles)
-     * - El total gastado
-     */
     fun cargar(rut: String) {
         viewModelScope.launch {
             _historial.value = repo.obtenerHistorial(rut)
             _totalGastado.value = repo.totalGastado(rut)
         }
     }
-
-    /**
-     * Registra una compra completa:
-     * - Guarda cabecera + detalles
-     * - Luego vuelve a leer el historial para tener datos frescos
-     * - onOk(id) te entrega el idCompra creado por si quieres usarlo
-     */
     fun registrarCompra(
         rut: String,
         items: List<ItemCarritoSnapshot>,
@@ -50,8 +38,8 @@ class ComprasViewModel(
                 fechaMillis = System.currentTimeMillis(),
                 items = items
             )
-            cargar(rut)          // refresca historial y total
-            onOk(id)             // callback opcional
+            cargar(rut)
+            onOk(id)
         }
     }
 }

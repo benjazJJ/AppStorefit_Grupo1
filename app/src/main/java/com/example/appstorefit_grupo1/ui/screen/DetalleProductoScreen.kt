@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -72,7 +71,7 @@ fun DetalleProductoScreen(
         }
     }
 
-    // Escucha de eventos del VM (éxito/error al agregar)
+    // Escucha de eventos del VM (éxiton y error al agregar)
     val evento = carritoVm.eventos.collectAsState(initial = null).value
     LaunchedEffect(evento) {
         evento?.let { msg ->
@@ -148,9 +147,6 @@ fun DetalleProductoScreen(
             else -> if (blanco) R.drawable.polerablancastorefit else R.drawable.polerastorefit
         }
     }
-
-    val precio = varianteSelect?.precio ?: 0
-    val stock  = varianteSelect?.stock  ?: 0
 
     Scaffold(
         topBar = {

@@ -59,8 +59,7 @@ class CategoriaRepository(private val dao: CategoriaDao) {
     // Entrega: id, nombre, cantidad de variantes (producto) y cantidad de modelos distintos
     fun observeResumen(): Flow<List<CategoriaResumen>> = dao.observeResumen()
 
-    // ===== Renombrar directo por id =====
-    // Ideal para el diálogo del admin. No borra nada.
+    // Renombrar directo por id
     suspend fun renombrar(id: Long, nuevoNombre: String): Result<Unit> {
         val nombre = nuevoNombre.trim()
         if (nombre.isBlank()) return Result.failure(IllegalArgumentException("Nombre requerido"))

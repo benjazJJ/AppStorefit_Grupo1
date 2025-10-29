@@ -82,8 +82,8 @@ class CarritoViewModel(
     // Acción de compra.
     // Llama a CheckoutRepository.confirmarCompra(), que realiza una transacción en Room:
     // 1) Valida stock por cada item del carrito.
-    // 2) Descuenta stock por cada item (si alguno falla, revierte todo).
-    // 3) Limpia el carrito si todo fue exitoso.
+    // 2) Descuenta stock por cada item (si alguno falla, revierte tod0).
+    // 3) Limpia el carrito si todo0 fue exitoso.
     // Emite un mensaje acorde al resultado para que la UI lo muestre.
     fun onComprar() = viewModelScope.launch {
         when (val r = checkoutRepo.confirmarCompra()) {

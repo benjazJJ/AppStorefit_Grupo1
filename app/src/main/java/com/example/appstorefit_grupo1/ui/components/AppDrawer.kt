@@ -1,4 +1,4 @@
-package com.example.appstorefit_grupo1.ui.components
+/**package com.example.appstorefit_grupo1.ui.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -55,4 +55,4 @@ fun datosDrawerItem(
     drawerItem("Ir al Inicio", Icons.Filled.Home, onClick = onHome),
     drawerItem("Ir al Login", Icons.Filled.AccountCircle, onClick = onLogin),
     drawerItem("Ir al Registro", Icons.Filled.Person, onClick = onRegister),
-)
+)**/

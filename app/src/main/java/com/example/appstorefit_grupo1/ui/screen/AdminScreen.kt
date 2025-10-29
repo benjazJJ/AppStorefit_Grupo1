@@ -11,7 +11,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Category
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
@@ -561,7 +560,7 @@ private fun formatCLP(monto: Int): String {
 
 
 
-@Composable
+/**@Composable
 private fun ProductoAdminItem(
     p: ProductosEntity,
     onEdit: () -> Unit
@@ -584,6 +583,7 @@ private fun ProductoAdminItem(
         )
     }
 }
+**/
 
 @Composable
 private fun EditVariantStockDialog(
@@ -650,7 +650,7 @@ private fun EditVariantStockDialog(
                     ) { Icon(Icons.Filled.Add, contentDescription = "Sumar 1") }
                 }
 
-                // (Opcional) saltos rápidos
+                // Saltos rápidos
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = {
                         if (stock >= 5) {

@@ -39,7 +39,6 @@ private data class TopDest(
 )
 
 //construimos el menú según el rol
-//construimos el menú según el rol
 private fun topDestinationsFor(roleId: Long?): List<TopDest> {
     val common = listOf(
         TopDest(Route.Productos.path, "Productos", Icons.Filled.Home),
@@ -166,7 +165,7 @@ private fun GraphHost(
                         restoreState = true
                     }
                 },
-                onLoginOkNavigateAdmin = {  // NUEVO
+                onLoginOkNavigateAdmin = {
                     navController.navigate(Route.Panel.path) {
                         popUpTo(Route.Login.path) { inclusive = true }
                         launchSingleTop = true

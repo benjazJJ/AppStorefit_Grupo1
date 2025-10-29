@@ -103,13 +103,13 @@ fun PerfilScreen(navController: NavController) {
         )
     }
 
-    // 1) Estados de usuario y foto
+    // Estados de usuario y foto
     var user by remember { mutableStateOf(SessionManager.user) }
     val roleId = SessionManager.roleId
     var photoUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
 
-    // 2) Launcher de cámara
+    // Launcher de cámara
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -235,7 +235,7 @@ fun PerfilScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // ── Tarjeta 1: Encabezado (nombre + rol)
+            // Tarjeta 1: Encabezado (nombre + rol)
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
@@ -266,7 +266,7 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
-            // ── Tarjeta 2: Foto perfil (con cambios de UI)
+            // Tarjeta 2: Foto perfil
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
@@ -482,7 +482,7 @@ fun PerfilScreen(navController: NavController) {
 
             Spacer(Modifier.height(16.dp))
 
-            // ---- Botón para ver historial de compras ----
+            // Botón para ver historial de compras
             Button(
                 onClick = { navController.navigate(Route.HistorialCompras.path) },
                 colors = ButtonDefaults.buttonColors(

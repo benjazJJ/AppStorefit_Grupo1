@@ -16,14 +16,14 @@ class CheckoutRepository(
     private val productosDao: ProductosDao,
     private val carritoDao: CarritoDao
 ) {
-    /** Descuenta stock de todos los items del carrito y limpia el carrito en una sola transacción. */
+    // Descuenta stock de todos los items del carrito y limpia el carrito en una sola transacción
     suspend fun confirmarCompra(): CheckoutResult {
         return try {
             db.withTransaction {
                 val items = carritoDao.getAllOnce()
                 if (items.isEmpty()) return@withTransaction CheckoutResult.SinStock("Tu carrito está vacío")
 
-                // Validación previa (mejor mensaje)
+                // Validación previa
                 for (it in items) {
                     val prod = productosDao.getByIds(it.idCategoria, it.idProducto)
                         ?: return@withTransaction CheckoutResult.SinStock("Producto no encontrado")

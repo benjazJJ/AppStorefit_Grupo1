@@ -1,4 +1,3 @@
-// AddToCartDialog.kt
 package com.example.appstorefit_grupo1.ui.components
 
 import androidx.compose.foundation.layout.Arrangement

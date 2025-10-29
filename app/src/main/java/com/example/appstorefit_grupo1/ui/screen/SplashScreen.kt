@@ -12,8 +12,6 @@ import androidx.navigation.NavController
 import com.example.appstorefit_grupo1.navigation.Route
 import com.example.appstorefit_grupo1.session.SessionManager
 import androidx.compose.ui.platform.LocalContext
-
-// ↓ imports esenciales
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,11 +27,11 @@ fun SplashScreen(navController: NavController) {
             val db = AppDatabase.getInstance(context)
             db.openHelper.writableDatabase
 
-            // 2) Espera breve a que termine el seed
+            // 2) Esperamos a que termine el seed
             val start = System.currentTimeMillis()
             while (true) {
                 val listo = kotlin.runCatching {
-                    // Semáforos mínimos de que el seed ya corrió:
+                    // Semáforos mínimos de que el seed ya corrió
                     (db.rolDao().count() > 0) && (db.registroDao().getByUsuario("a@a.cl") != null)
                 }.getOrDefault(false)
 

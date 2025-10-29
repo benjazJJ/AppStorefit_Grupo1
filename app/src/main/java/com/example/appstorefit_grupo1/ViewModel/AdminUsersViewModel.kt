@@ -98,21 +98,7 @@ class AdminUsuariosViewModel(
         }
     }
 
-    // ELIMINAR
-    fun solicitarEliminar(rut: String) { _ui.update { it.copy(rutAConfirmarEliminacion = rut) } }
-    fun cancelarEliminar() { _ui.update { it.copy(rutAConfirmarEliminacion = null) } }
-    fun confirmarEliminar() {
-        val rut = _ui.value.rutAConfirmarEliminacion ?: return
-        viewModelScope.launch {
-            val res = repositorio.adminDeleteUserByRut(rut)
-            _ui.update { it.copy(rutAConfirmarEliminacion = null) }
-            if (res.isSuccess) recargarUsuarios()
-            else _ui.update { it.copy(mensajeError = res.exceptionOrNull()?.message) }
-        }
-    }
-
-    // ===================== CREAR =====================
-
+    // CREAR
     fun abrirCrear() {
         viewModelScope.launch {
             // Limpia estado y abre diálogo
@@ -230,7 +216,7 @@ class AdminUsuariosViewModel(
         }
     }
 
-    // ===================== EDITAR =====================
+    // EDITAR
 
     fun abrirEditar(rut: String) {
         viewModelScope.launch {
@@ -268,13 +254,6 @@ class AdminUsuariosViewModel(
         _ui.update { it.copy(eTelefono2 = d, errTelefono2 = if (d.isBlank()) null else validateTelefono(d)).recalcularEditar() }
     }
 
-    // Aunque en UI están bloqueados, mantenemos setters por consistencia (no harán efecto si el campo está disabled)
-    fun onCambiarDireccionEditar(v: String) { _ui.update { it.copy(eDireccion2 = v).recalcularEditar() } }
-
-    fun onCambiarNacimientoEditar(v: String) {
-        _ui.update { it.copy(eNacimiento2 = v, errNacimiento2 = validarNacimientoSeguro(v)).recalcularEditar() }
-    }
-
     private fun validarNacimientoSeguro(v: String): String? =
         if (v.isBlank()) null else validateBirthDate(v)
 
@@ -309,8 +288,6 @@ class AdminUsuariosViewModel(
             }
         }
     }
-
-    // ===================== ASIGNAR ROL =====================
 
     fun abrirAsignarRol(rut: String) {
         viewModelScope.launch {

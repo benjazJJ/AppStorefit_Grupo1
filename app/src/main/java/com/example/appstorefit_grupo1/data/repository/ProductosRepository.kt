@@ -48,7 +48,7 @@ class ProductosRepository(
         modelo: String,
         color: String,
         talla: String,
-        precio: Int,   // <- Int ahora
+        precio: Int,
         stock: Int,
         marca: String = "StoreFit"
     ): Result<Pair<Long, Long>> {
