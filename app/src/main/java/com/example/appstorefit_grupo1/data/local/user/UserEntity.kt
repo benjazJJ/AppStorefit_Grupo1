@@ -20,6 +20,7 @@ data class UserEntity(
     @ColumnInfo(name = "nombre")
     val name: String,
 
+
     @ColumnInfo(name = "correo_electronico")
     val email: String,
 

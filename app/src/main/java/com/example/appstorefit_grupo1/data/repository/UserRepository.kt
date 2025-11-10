@@ -17,7 +17,7 @@ class UserRepository(
     private val rolDao: com.example.appstorefit_grupo1.data.local.rol.RolDao
 ) {
 
-    //INICIO DE SESIÓN
+    // INICIO DE SESIÓN
     suspend fun login(email: String, pass: String): Result<UserEntity> {
         val correoCanonico = emailCanonico(email)
         val registro = registroDao.getByUsuario(correoCanonico)
@@ -104,11 +104,22 @@ class UserRepository(
         )
     }
 
-    // CHEQUEOS DE UNICIDAD
+    //  CHEQUEOS DE UNICIDAD
     suspend fun isEmailTaken(email: String): Boolean {
         val canon = emailCanonico(email)
         if (canon.isBlank()) return false
         return userDao.existsEmail(canon) > 0 || registroDao.getByUsuario(canon) != null
+    }
+
+    // Devuelve true si el correo está libre o es el mismo correo actual del usuario
+    suspend fun emailDisponible(nuevoEmail: String, emailActual: String): Boolean {
+        val canonNuevo = emailCanonico(nuevoEmail)
+        val canonActual = emailCanonico(emailActual)
+        if (canonNuevo == canonActual) return true
+        // Si cambió, debe NO existir en usuarios ni en registro
+        val existeEnUsuarios = userDao.existsEmail(canonNuevo) > 0
+        val existeEnRegistro = registroDao.getByUsuario(canonNuevo) != null
+        return !(existeEnUsuarios || existeEnRegistro)
     }
 
     suspend fun isRutTaken(rut: String): Boolean =
@@ -120,6 +131,12 @@ class UserRepository(
         val p = phoneCanonico(phone)
         if (p.isBlank()) return false
         return userDao.existsPhone(p) > 0
+    }
+
+    suspend fun telefonoDisponible(telefono: String, rut: String): Boolean {
+        val p = phoneCanonico(telefono)
+        if (p.isBlank()) return true
+        return userDao.existsPhoneExceptRut(p, rut) == 0
     }
 
     // CONTRASEÑA
@@ -151,7 +168,23 @@ class UserRepository(
         else Result.failure(IllegalStateException("No se pudo actualizar la contraseña"))
     }
 
-    // PERFIL
+    // PERFIL (lecturas/actualizaciones)
+
+
+    suspend fun getUserByEmail(email: String): UserEntity? =
+        userDao.getByEmail(emailCanonico(email))
+
+    suspend fun obtenerUsuarioPorRut(rut: String): UserEntity? =
+        userDao.getByRut(rut)
+
+    // Refrescar sesión usando email
+    suspend fun refreshSessionUserByEmail(email: String): UserEntity? {
+        val fresh = getUserByEmail(email)
+        if (fresh != null) SessionManager.user = fresh
+        return fresh
+    }
+
+    // Actualizar solo dirección por email
     suspend fun updateAddressByEmail(email: String, newAddress: String): Result<Unit> {
         val correoCanonico = emailCanonico(email)
         val user = userDao.getByEmail(correoCanonico)
@@ -168,16 +201,61 @@ class UserRepository(
         }
     }
 
-    suspend fun getUserByEmail(email: String): UserEntity? =
-        userDao.getByEmail(emailCanonico(email))
+    // Validaciones previas esperadas en el ViewModel (formato/edad mínima ya comprobados).
+    suspend fun actualizarPerfil(
+        rut: String,
+        nombre: String,
+        telefono: String?,
+        direccion: String,
+        fechaNacimiento: String,
+        emailNuevo: String? = null
+    ): Result<Unit> = runCatching {
+        // Normalizar datos
+        val phoneCanon = telefono?.filter { it.isDigit() }?.ifBlank { null }
+        val emailCanon = emailNuevo?.let { emailCanonico(it) }?.ifBlank { null }
 
-    suspend fun refreshSessionUserByEmail(email: String): UserEntity? {
-        val fresh = getUserByEmail(email)
-        if (fresh != null) SessionManager.user = fresh
-        return fresh
+        db.withTransaction {
+            // 1) Validar unicidad de teléfono (excluyendo al propio RUT)
+            if (!phoneCanon.isNullOrBlank() && userDao.existsPhoneExceptRut(phoneCanon, rut) > 0) {
+                error("El teléfono ya está registrado por otro usuario.")
+            }
+
+            // 2) Cargar usuario actual (para comparar correo)
+            val actual = userDao.getByRut(rut) ?: error("Usuario no encontrado")
+
+            // 3) Si viene un correo nuevo y es distinto, validar y actualizar en ambas tablas
+            if (!emailCanon.isNullOrBlank() && emailCanon != actual.email) {
+                val existeEnUsuarios = userDao.existsEmail(emailCanon) > 0
+                val existeEnRegistro = registroDao.getByUsuario(emailCanon) != null
+                if (existeEnUsuarios || existeEnRegistro) error("Correo ya registrado")
+
+                // Actualizar correo en usuarios y en registro (mismo rut)
+                val filasU = userDao.updateEmailByRut(rut, emailCanon)
+                val filasR = registroDao.updateUsuarioByRut(rut, emailCanon)
+                require(filasU > 0 && filasR > 0) { "No se pudo actualizar el correo." }
+            }
+
+            // 4) Actualizar el resto del perfil en tabla usuarios
+            val filas = userDao.actualizarPerfilPorRut(
+                rut = rut,
+                nombre = nombre.trim(),
+                telefono = phoneCanon,
+                direccion = direccion.trim(),
+                fechaNacimiento = fechaNacimiento.trim()
+            )
+            require(filas > 0) { "No se pudo actualizar el perfil." }
+
+            // 5) Refrescar sesión si corresponde
+            if (SessionManager.user?.rut == rut) {
+                userDao.getByRut(rut)?.let { actualizado ->
+                    SessionManager.user = actualizado
+                }
+            }
+        }
     }
 
-    // FOTO DE PERFIL
+
+    //FOTO DE PERFIL
     suspend fun saveUserPhoto(email: String, uri: String): Result<Unit> {
         val canon = emailCanonico(email)
         if (canon.isBlank() || uri.isBlank()) return Result.failure(IllegalArgumentException("Datos inválidos"))
@@ -201,17 +279,11 @@ class UserRepository(
     suspend fun getUserPhoto(email: String): String? =
         userDao.getPhotoUriByEmail(emailCanonico(email))
 
-    //ADMIN – Usuarios
+    //  ADMIN – Usuarios
     suspend fun adminListUsers(): Result<List<AdminUserRow>> = runCatching {
         userDao.adminListUsers()
     }
 
-    suspend fun adminDeleteUserByRut(rut: String): Result<Unit> = runCatching {
-        db.withTransaction {
-            registroDao.deleteByRut(rut)
-            userDao.deleteByRut(rut)
-        }
-    }
 
     suspend fun adminCreateUser(
         user: UserEntity,
@@ -240,7 +312,6 @@ class UserRepository(
     }
 
     suspend fun adminUpdateUser(user: UserEntity): Result<Unit> = runCatching {
-        // Update PARCIAL: nombre, email, teléfono (NO tocamos dirección ni nacimiento)
         val correoCanon = emailCanonico(user.email)
         val phoneCanon  = user.phone?.filter { it.isDigit() }
         val rows = userDao.adminUpdateEditable(

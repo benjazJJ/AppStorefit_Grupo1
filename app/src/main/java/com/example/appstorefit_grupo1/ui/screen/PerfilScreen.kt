@@ -2,10 +2,12 @@ package com.example.appstorefit_grupo1.ui.screen
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,17 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AlternateEmail
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,7 +26,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,8 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.appstorefit_grupo1.ViewModel.MensajesViewModel
-import com.example.appstorefit_grupo1.ViewModel.MensajesViewModelFactory
+import com.example.appstorefit_grupo1.ViewModel.*
 import com.example.appstorefit_grupo1.ui.components.CampoReadOnlyDegradado
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.UserRepository
@@ -58,26 +48,24 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
-
-//Helpers de cámara
+// Helpers de cámara
 private fun createTempImageFile(context: Context): File {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val storageDir = File(context.cacheDir, "images").apply { if (!exists()) mkdirs() }
     return File(storageDir, "IMG_${timeStamp}.jpg")
 }
-
 private fun getImageUriForFile(context: Context, file: File): Uri {
     val authority = "${context.packageName}.fileprovider"
     return FileProvider.getUriForFile(context, authority, file)
 }
 
-// Convierte el RUT a un Long estable para usar como senderUserId
+// Id estable desde RUT (para soporte)
 private fun rutToStableLong(rut: String): Long {
     val onlyDigits = rut.filter { it.isDigit() }
     return onlyDigits.toLongOrNull() ?: rut.hashCode().toLong()
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerfilScreen(navController: NavController) {
@@ -88,28 +76,25 @@ fun PerfilScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val mensajesVm: MensajesViewModel = viewModel (factory = MensajesViewModelFactory(context))
+    // VM de auth (perfil integrado)
+    val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
+    val perfil by vm.perfil.collectAsStateWithLifecycle()
+
+    // VM de mensajes (se mantiene)
+    val mensajesVm: MensajesViewModel = viewModel(factory = MensajesViewModelFactory(context))
     val envio by mensajesVm.envio.collectAsStateWithLifecycle()
     var mensajeTexto by rememberSaveable { mutableStateOf("") }
 
-
-    val db = remember { AppDatabase.getInstance(context) }
-    val repo = remember {
-        UserRepository(
-            db = db,
-            userDao = db.userDao(),
-            registroDao = db.registroDao(),
-            rolDao = db.rolDao()
-        )
-    }
-
-    // Estados de usuario y foto
+    // User para mostrar email/rut/rol + foto
     var user by remember { mutableStateOf(SessionManager.user) }
     val roleId = SessionManager.roleId
+
+    // Foto (flujo independiente)
+    val db = remember { AppDatabase.getInstance(context) }
+    val repo = remember { UserRepository(db, db.userDao(), db.registroDao(), db.rolDao()) }
     var photoUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Launcher de cámara
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -117,13 +102,12 @@ fun PerfilScreen(navController: NavController) {
             val finalUri = pendingCaptureUri?.toString()
             photoUriString = finalUri
             Toast.makeText(context, "Foto tomada correctamente", Toast.LENGTH_SHORT).show()
-
             val emailActual = SessionManager.user?.email
             if (!finalUri.isNullOrBlank() && !emailActual.isNullOrBlank()) {
                 scope.launch {
                     repo.saveUserPhoto(emailActual, finalUri)
                     repo.refreshSessionUserByEmail(emailActual)
-                    user = SessionManager.user // refresca en memoria
+                    user = SessionManager.user
                 }
             }
         } else {
@@ -132,7 +116,6 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // Launcher de Photo Picker (solo IMÁGENES)
     val pickMediaLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -140,7 +123,6 @@ fun PerfilScreen(navController: NavController) {
             val finalUri = uri.toString()
             photoUriString = finalUri
             Toast.makeText(context, "Foto seleccionada desde galería", Toast.LENGTH_SHORT).show()
-
             val emailActual = SessionManager.user?.email
             if (!emailActual.isNullOrBlank()) {
                 scope.launch {
@@ -152,17 +134,46 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // 3) Refresca datos al entrar
+    // Al entrar: cargar perfil y refrescar foto
     LaunchedEffect(Unit) {
-        val email = user?.email ?: return@LaunchedEffect
-        val fresh = repo.refreshSessionUserByEmail(email)
-        if (fresh != null) {
-            user = fresh
-            if (photoUriString.isNullOrBlank()) photoUriString = fresh.photoUri
+        vm.cargarPerfil()
+        val email = user?.email
+        if (!email.isNullOrBlank()) {
+            val fresh = repo.refreshSessionUserByEmail(email)
+            if (fresh != null) {
+                user = fresh
+                if (photoUriString.isNullOrBlank()) photoUriString = fresh.photoUri
+            }
         }
     }
 
-    // Feedback de envío de mensaje
+    // Control de edición por campo
+    var editNombre by rememberSaveable { mutableStateOf(false) }
+    var editFecha by rememberSaveable { mutableStateOf(false) }
+    var editTelefono by rememberSaveable { mutableStateOf(false) }
+    var editDireccion by rememberSaveable { mutableStateOf(false) }
+    var editCorreo by rememberSaveable { mutableStateOf(false) }
+    val anyEditing = editNombre || editFecha || editTelefono || editDireccion || editCorreo
+
+    fun enterEdit() { if (!perfil.modoEdicion) vm.alternarModoEdicionPerfil() }
+    fun exitEdit()  { if (perfil.modoEdicion) vm.alternarModoEdicionPerfil() }
+    fun clearEdits() {
+        editNombre = false
+        editFecha = false
+        editTelefono = false
+        editDireccion = false
+        editCorreo = false
+    }
+
+    // Cerrar edición tras guardar OK
+    LaunchedEffect(perfil.mensaje, perfil.modoEdicion) {
+        if (!perfil.modoEdicion && perfil.mensaje == "Perfil actualizado correctamente.") {
+            user = SessionManager.user
+            clearEdits()
+        }
+    }
+
+    // Feedback envío soporte
     LaunchedEffect(envio.ok, envio.error) {
         when {
             envio.ok -> {
@@ -173,38 +184,6 @@ fun PerfilScreen(navController: NavController) {
             envio.error != null -> {
                 Toast.makeText(context, envio.error ?: "Error al enviar", Toast.LENGTH_SHORT).show()
                 mensajesVm.limpiarEstadoEnvio()
-            }
-        }
-    }
-
-
-    // Badget de rol
-    @Composable
-    fun RoleBox(roleName: String) {
-        OutlinedCard(
-            colors = CardDefaults.outlinedCardColors(containerColor = cs.surface),
-            border = CardDefaults.outlinedCardBorder(),
-            modifier = Modifier
-                .clip(MaterialTheme.shapes.medium)
-                .wrapContentWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    color = cs.primary,
-                    contentColor = cs.onPrimary,
-                    shape = MaterialTheme.shapes.small,
-                    modifier = Modifier.size(10.dp)
-                ) {}
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    roleName.uppercase(),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = cs.onSurface,
-                    fontWeight = FontWeight.SemiBold
-                )
             }
         }
     }
@@ -235,83 +214,74 @@ fun PerfilScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // Tarjeta 1: Encabezado (nombre + rol)
+            // Header (nombre + rol) con lápiz solo para nombre
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.Person, contentDescription = null, tint = cs.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        u.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cs.onSurface,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.weight(1f))
-                    RoleBox(
-                        roleName = when (roleId) {
-                            2L -> "ADMINISTRADOR"
-                            3L -> "SOPORTE"
-                            else -> "CLIENTE"
+
+                    if (!editNombre) {
+                        Text(
+                            if (perfil.nombre.isNotBlank()) perfil.nombre else u.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = cs.onSurface,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = { editNombre = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar nombre")
                         }
+                    } else {
+                        OutlinedTextField(
+                            value = perfil.nombre,
+                            onValueChange = vm::onPerfilNombreChange,
+                            label = { Text("Nombre") },
+                            isError = perfil.errorNombre != null,
+                            supportingText = { perfil.errorNombre?.let { Text(it) } },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+                    RoleBox(
+                        roleName = when (roleId) { 2L -> "ADMINISTRADOR"; 3L -> "SOPORTE"; else -> "CLIENTE" }
                     )
                 }
             }
 
-            // Tarjeta 2: Foto perfil
+            // Foto de perfil
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Foto Perfil",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = cs.onSurface,
-                        textAlign = TextAlign.Center
-                    )
+                    Text("Foto Perfil", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
                     Spacer(Modifier.height(14.dp))
 
                     var showDialog by remember { mutableStateOf(false) }
 
                     if (photoUriString.isNullOrEmpty()) {
-                        // Placeholder redondo
                         Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape)
+                            modifier = Modifier.size(120.dp).clip(CircleShape)
                                 .background(cs.surfaceVariant.copy(alpha = 0.45f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = null,
-                                tint = cs.onSurfaceVariant
-                            )
+                            Icon(Icons.Filled.Person, contentDescription = null, tint = cs.onSurfaceVariant)
                         }
                         Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = "Sin foto de perfil",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = cs.onSurfaceVariant
-                        )
+                        Text("Sin foto de perfil", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                         Spacer(Modifier.height(14.dp))
-
-                        //Fila con Cámara + Galería
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -325,41 +295,24 @@ fun PerfilScreen(navController: NavController) {
                                     takePictureLauncher.launch(uri)
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Cámara")
-                            }
+                            ) { Icon(Icons.Filled.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Cámara") }
                             OutlinedButton(
                                 onClick = {
                                     pickMediaLauncher.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly // Solo imágenes
-                                        )
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     )
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Filled.Image, contentDescription = null) // ✅ CAMBIO
-                                Spacer(Modifier.width(8.dp))
-                                Text("Galería")
-                            }
+                            ) { Icon(Icons.Filled.Image, null); Spacer(Modifier.width(8.dp)); Text("Galería") }
                         }
-                        // (No mostramos “Eliminar” porque no hay foto aún)
                     } else {
                         AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(Uri.parse(photoUriString)).crossfade(true)
-                                .build(),
+                            model = ImageRequest.Builder(context).data(Uri.parse(photoUriString)).crossfade(true).build(),
                             contentDescription = "Foto de perfil",
-                            modifier = Modifier
-                                .size(140.dp)
-                                .clip(CircleShape),
+                            modifier = Modifier.size(140.dp).clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(Modifier.height(14.dp))
-
-                        //fila solo con Cámara + Galería
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -373,43 +326,22 @@ fun PerfilScreen(navController: NavController) {
                                     takePictureLauncher.launch(uri)
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Cámara")
-                            }
+                            ) { Icon(Icons.Filled.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Cámara") }
                             OutlinedButton(
                                 onClick = {
                                     pickMediaLauncher.launch(
-                                        PickVisualMediaRequest(
-                                            ActivityResultContracts.PickVisualMedia.ImageOnly // Solo imágenes
-                                        )
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                     )
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Filled.Image, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Galería")
-                            }
+                            ) { Icon(Icons.Filled.Image, null); Spacer(Modifier.width(8.dp)); Text("Galería") }
                         }
-
-                        // Botón “Eliminar” debajo y centrado
                         Spacer(Modifier.height(12.dp))
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            OutlinedButton(
-                                onClick = { showDialog = true },
-                                modifier = Modifier.widthIn(min = 180.dp) // para que se vea centrado y consistente
-                            ) {
-                                Icon(Icons.Filled.Delete, contentDescription = null)
-                                Spacer(Modifier.width(8.dp))
-                                Text("Eliminar")
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            OutlinedButton(onClick = { showDialog = true }, modifier = Modifier.widthIn(min = 180.dp)) {
+                                Icon(Icons.Filled.Delete, null); Spacer(Modifier.width(8.dp)); Text("Eliminar")
                             }
                         }
-
                         if (showDialog) {
                             AlertDialog(
                                 onDismissRequest = { showDialog = false },
@@ -428,61 +360,151 @@ fun PerfilScreen(navController: NavController) {
                                         }
                                     }) { Text("Eliminar") }
                                 },
-                                dismissButton = {
-                                    TextButton(onClick = { showDialog = false }) { Text("Cancelar") }
-                                }
+                                dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancelar") } }
                             )
                         }
                     }
                 }
             }
 
-            // Campos read-only con borde degradado
-            CampoReadOnlyDegradado(
-                etiqueta = "Correo electrónico",
-                valor = u.email,
-                leadingIcon = { Icon(Icons.Filled.AlternateEmail, contentDescription = null) },
-                borderBrush = grad1
-            )
+            // ---------- FORMULARIO EN UNA SOLA SECCIÓN ----------
+
+            // Correo electrónico (editable con lápiz)
+            if (!editCorreo) {
+                CampoReadOnlyDegradado(
+                    etiqueta = "Correo electrónico",
+                    valor = perfil.correo.ifBlank { u.email },
+                    leadingIcon = { Icon(Icons.Filled.AlternateEmail, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { editCorreo = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar correo")
+                        }
+                    },
+                    borderBrush = grad1
+                )
+            } else {
+                OutlinedTextField(
+                    value = perfil.correo,
+                    onValueChange = vm::onPerfilEmailChange,
+                    label = { Text("Correo electrónico") },
+                    isError = perfil.errorCorreo != null,
+                    supportingText = { perfil.errorCorreo?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // RUT (solo lectura)
             CampoReadOnlyDegradado(
                 etiqueta = "RUT",
                 valor = u.rut,
-                leadingIcon = { Icon(Icons.Filled.Badge, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Filled.Badge, null) },
                 borderBrush = grad2
             )
-            CampoReadOnlyDegradado(
-                etiqueta = "Contraseña",
-                valor = "********",
-                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
-                trailingIcon = {
-                    IconButton(onClick = { navController.navigate(Route.EditarContrasena.path) }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Editar contraseña")
-                    }
-                },
-                borderBrush = grad1
-            )
-            CampoReadOnlyDegradado(
-                etiqueta = "Fecha de Nacimiento",
-                valor = u.birthDate,
-                leadingIcon = { Icon(Icons.Filled.Cake, contentDescription = null) },
-                borderBrush = grad1
-            )
-            CampoReadOnlyDegradado(
-                etiqueta = "Teléfono",
-                valor = u.phone?.takeIf { it.isNotBlank() } ?: "No registrado",
-                leadingIcon = { Icon(Icons.Filled.Phone, contentDescription = null) },
-                borderBrush = grad2
-            )
-            CampoReadOnlyDegradado(
-                etiqueta = "Dirección",
-                valor = u.address,
-                leadingIcon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                borderBrush = grad1
-            )
+
+            // Fecha de nacimiento
+            if (!editFecha) {
+                CampoReadOnlyDegradado(
+                    etiqueta = "Fecha de nacimiento",
+                    valor = perfil.fechaNacimiento.ifBlank { u.birthDate },
+                    leadingIcon = { Icon(Icons.Filled.Cake, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { editFecha = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar fecha de nacimiento")
+                        }
+                    },
+                    borderBrush = grad1
+                )
+            } else {
+                OutlinedTextField(
+                    value = perfil.fechaNacimiento,
+                    onValueChange = vm::onPerfilFechaChange,
+                    label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
+                    leadingIcon = { Icon(Icons.Filled.Cake, null) },
+                    isError = perfil.errorFechaNacimiento != null,
+                    supportingText = { perfil.errorFechaNacimiento?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Teléfono
+            if (!editTelefono) {
+                CampoReadOnlyDegradado(
+                    etiqueta = "Teléfono",
+                    valor = perfil.telefono.ifBlank { u.phone ?: "No registrado" },
+                    leadingIcon = { Icon(Icons.Filled.Phone, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { editTelefono = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar teléfono")
+                        }
+                    },
+                    borderBrush = grad2
+                )
+            } else {
+                OutlinedTextField(
+                    value = perfil.telefono,
+                    onValueChange = vm::onPerfilTelefonoChange,
+                    label = { Text("Teléfono") },
+                    leadingIcon = { Icon(Icons.Filled.Phone, null) },
+                    isError = perfil.errorTelefono != null,
+                    supportingText = { perfil.errorTelefono?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Dirección
+            if (!editDireccion) {
+                CampoReadOnlyDegradado(
+                    etiqueta = "Dirección",
+                    valor = perfil.direccion.ifBlank { u.address },
+                    leadingIcon = { Icon(Icons.Filled.Home, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { editDireccion = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar dirección")
+                        }
+                    },
+                    borderBrush = grad1
+                )
+            } else {
+                OutlinedTextField(
+                    value = perfil.direccion,
+                    onValueChange = vm::onPerfilDireccionChange,
+                    label = { Text("Dirección") },
+                    leadingIcon = { Icon(Icons.Filled.Home, null) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Botonera guardar/cancelar (solo cuando hay edición)
+            if (anyEditing) {
+                if (perfil.cargando) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = { vm.submitPerfilGuardar() },
+                        enabled = perfil.puedeGuardar && !perfil.cargando,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Guardar cambios") }
+
+                    OutlinedButton(
+                        onClick = {
+                            vm.cargarPerfil()
+                            clearEdits()
+                            exitEdit()
+                        },
+                        enabled = !perfil.cargando,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Cancelar") }
+                }
+                perfil.mensaje?.let { Text(it, color = cs.primary) }
+            }
 
             Spacer(Modifier.height(16.dp))
 
-            // Botón para ver historial de compras
+            // Historial de compras
             Button(
                 onClick = { navController.navigate(Route.HistorialCompras.path) },
                 colors = ButtonDefaults.buttonColors(
@@ -490,15 +512,12 @@ fun PerfilScreen(navController: NavController) {
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 ),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Text("Historial de compras", style = MaterialTheme.typography.labelLarge)
-            }
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) { Text("Historial de compras", style = MaterialTheme.typography.labelLarge) }
 
             Spacer(Modifier.height(12.dp))
 
+            // Cerrar sesión
             Button(
                 onClick = {
                     SessionManager.user = null
@@ -513,14 +532,10 @@ fun PerfilScreen(navController: NavController) {
                     contentColor = cs.onPrimary
                 ),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-            ) {
-                Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge)
-            }
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) { Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge) }
 
-            // Contactar Soporte (solo si el rol es CLIENTE = 1L)
+            // Contactar Soporte (solo CLIENTE)
             if (roleId == 1L) {
                 ElevatedCard(
                     colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
@@ -544,22 +559,36 @@ fun PerfilScreen(navController: NavController) {
                                 val senderId = rutToStableLong(uSafe.rut)
                                 mensajesVm.enviarMensaje(
                                     idUsuarioRemitente = senderId,
-                                    idRolDestinoSoporte = 3, // SOPORTE
+                                    idRolDestinoSoporte = 3,
                                     contenido = mensajeTexto
                                 )
                             },
                             enabled = mensajeTexto.isNotBlank() && !envio.enviando,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                        ) {
-                            Text(if (envio.enviando) "Enviando..." else "Enviar a Soporte")
-                        }
+                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                        ) { Text(if (envio.enviando) "Enviando..." else "Enviar a Soporte") }
                     }
                 }
                 Spacer(Modifier.height(16.dp))
             }
+        }
+    }
+}
 
+@Composable
+private fun RoleBox(roleName: String) {
+    val cs = MaterialTheme.colorScheme
+    OutlinedCard(
+        colors = CardDefaults.outlinedCardColors(containerColor = cs.surface),
+        border = CardDefaults.outlinedCardBorder(),
+        modifier = Modifier.clip(MaterialTheme.shapes.medium).wrapContentWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(color = cs.primary, contentColor = cs.onPrimary, shape = MaterialTheme.shapes.small, modifier = Modifier.size(10.dp)) {}
+            Spacer(Modifier.width(8.dp))
+            Text(roleName.uppercase(), style = MaterialTheme.typography.labelLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
         }
     }
 }

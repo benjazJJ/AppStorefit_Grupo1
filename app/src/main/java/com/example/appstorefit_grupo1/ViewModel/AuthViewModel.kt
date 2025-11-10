@@ -13,9 +13,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import com.example.appstorefit_grupo1.session.SessionManager
+
+// Jobs globales (debounce)
 private var emailCheckJob: Job? = null
 private var rutCheckJob: Job? = null
 private var phoneCheckJob: Job? = null
+private var phonePerfilCheckJob: Job? = null
+
+private var emailPerfilCheckJob: Job? = null
+
 
 data class LoginUiState(
     val email: String = "",
@@ -55,18 +61,42 @@ data class RegisterUiState(
     val errorMsg: String? = null
 )
 
+data class PerfilUiState(
+    val cargando: Boolean = false,
+    val modoEdicion: Boolean = false,
+
+    val nombre: String = "",
+    val correo: String = "",
+    val telefono: String = "",
+    val direccion: String = "",
+    val fechaNacimiento: String = "",
+
+    val errorNombre: String? = null,
+    val errorCorreo : String? = null,
+    val errorTelefono: String? = null,
+    val errorFechaNacimiento: String? = null,
+
+    val puedeGuardar: Boolean = false,
+    val mensaje: String? = null
+)
+
 class AuthViewModel(
     private val repository: UserRepository,
     private val appContext: android.content.Context
 ) : ViewModel() {
 
+    // Login/Registro
     private val _login = MutableStateFlow(LoginUiState())
     val login: StateFlow<LoginUiState> = _login
 
     private val _register = MutableStateFlow(RegisterUiState())
     val register: StateFlow<RegisterUiState> = _register
 
-    // LOGIN
+    // Perfil
+    private val _perfil = MutableStateFlow(PerfilUiState())
+    val perfil: StateFlow<PerfilUiState> = _perfil
+
+    // ---------- LOGIN ----------
     fun onLoginEmailChange(value: String) {
         _login.update { it.copy(email = value, emailError = validateEmail(value)) }
         recomputeLoginCanSubmit()
@@ -94,14 +124,10 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _login.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
-            //delay para más detalle UI
             delay(250)
-
             val result = repository.login(s.email, s.pass)
             if (result.isSuccess) {
-                //Persistir la sesión en DataStore (el repo ya setea SessionManager.user y roleId)
                 SessionManager.persistToStore(appContext)
-
                 _login.update { it.copy(isSubmitting = false, success = true, errorMsg = null) }
             } else {
                 _login.update {
@@ -122,29 +148,19 @@ class AuthViewModel(
     // ---------- REGISTRO ----------
     fun onRutChange(value: String) {
         val filtered = value.trim()
-
-        // 1) Validación de formato inmediata (tu validateRut actual)
         _register.update { it.copy(rut = filtered, rutError = validateRut(filtered)) }
 
-        // 2) Debounce para chequear unicidad en BD solo si no hay error de formato
         rutCheckJob?.cancel()
         rutCheckJob = viewModelScope.launch {
             delay(350)
             val current = _register.value.rut
             if (_register.value.rutError != null || current.isBlank()) {
-                recomputeRegisterCanSubmit()
-                return@launch
+                recomputeRegisterCanSubmit(); return@launch
             }
-
             val tomado = repository.isRutTaken(current)
-            _register.update {
-                it.copy(
-                    rutError = if (tomado) "RUT ya registrado" else null
-                )
-            }
+            _register.update { it.copy(rutError = if (tomado) "RUT ya registrado" else null) }
             recomputeRegisterCanSubmit()
         }
-
         recomputeRegisterCanSubmit()
     }
 
@@ -155,57 +171,36 @@ class AuthViewModel(
     }
 
     fun onRegisterEmailChange(value: String) {
-        // 1) Validación de formato inmediata
         _register.update { it.copy(email = value, emailError = validateEmail(value)) }
 
-        // 2) Debounce para chequear unicidad en BD solo si no hay error de formato
         emailCheckJob?.cancel()
         emailCheckJob = viewModelScope.launch {
             delay(350)
             val current = _register.value.email
-            // si el formato es inválido o está vacío, no consultamos BD
             if (_register.value.emailError != null || current.isBlank()) {
-                recomputeRegisterCanSubmit()
-                return@launch
+                recomputeRegisterCanSubmit(); return@launch
             }
-
             val tomado = repository.isEmailTaken(current)
-            _register.update {
-                it.copy(
-                    emailError = if (tomado) "Correo ya registrado" else null
-                )
-            }
+            _register.update { it.copy(emailError = if (tomado) "Correo ya registrado" else null) }
             recomputeRegisterCanSubmit()
         }
-
         recomputeRegisterCanSubmit()
     }
 
     fun onPhoneChange(value: String) {
-        // 1) dejar solo dígitos
         val digits = value.filter { it.isDigit() }
-
-        // 2) validación inmediata (formato/longitud) usando validateTelefono
         _register.update { it.copy(phone = digits, phoneError = validateTelefono(digits)) }
 
-        // 3) debounce para chequear unicidad SOLO si no hay error de formato
         phoneCheckJob?.cancel()
         phoneCheckJob = viewModelScope.launch {
             delay(350)
             val current = _register.value.phone
             val hayErrorFormato = _register.value.phoneError != null
-
             if (hayErrorFormato || current.isBlank()) {
-                recomputeRegisterCanSubmit()
-                return@launch
+                recomputeRegisterCanSubmit(); return@launch
             }
-
             val tomado = repository.isPhoneTaken(current)
-            _register.update {
-                it.copy(
-                    phoneError = if (tomado) "Este teléfono ya pertenece a otro usuario." else null
-                )
-            }
+            _register.update { it.copy(phoneError = if (tomado) "Este teléfono ya pertenece a otro usuario." else null) }
             recomputeRegisterCanSubmit()
         }
         recomputeRegisterCanSubmit()
@@ -216,7 +211,7 @@ class AuthViewModel(
         _register.update {
             it.copy(
                 birthDate = value,
-                birthDateError = validateBirthDate(value)
+                birthDateError = validateBirthDate(value, 15)
             )
         }
         recomputeRegisterCanSubmit()
@@ -260,7 +255,6 @@ class AuthViewModel(
         viewModelScope.launch {
             _register.update { it.copy(isSubmitting = true, errorMsg = null, success = false) }
             delay(350)
-
             val result = repository.register(
                 rut = s.rut,
                 name = s.name,
@@ -270,22 +264,169 @@ class AuthViewModel(
                 pass = s.pass,
                 birthDate = s.birthDate
             )
-
             _register.update {
-                if (result.isSuccess) {
-                    it.copy(isSubmitting = false, success = true, errorMsg = null)
-                } else {
-                    it.copy(
-                        isSubmitting = false,
-                        success = false,
-                        errorMsg = result.exceptionOrNull()?.message ?: "Registro inválido"
-                    )
-                }
+                if (result.isSuccess) it.copy(isSubmitting = false, success = true, errorMsg = null)
+                else it.copy(isSubmitting = false, success = false, errorMsg = result.exceptionOrNull()?.message ?: "Registro inválido")
             }
         }
     }
 
-    fun clearRegisterResult(){
+    fun clearRegisterResult() {
         _register.update { it.copy(success = false, errorMsg = null) }
+    }
+
+    // ---------- PERFIL ----------
+    fun cargarPerfil() {
+        val u = SessionManager.user
+        if (u == null) {
+            _perfil.update { it.copy(mensaje = "Sesión no disponible.") }
+            return
+        }
+        _perfil.update {
+            it.copy(
+                cargando = false,
+                modoEdicion = false,
+                nombre = u.name,
+                correo = u.email,
+                telefono = u.phone.orEmpty(),
+                direccion = u.address,
+                fechaNacimiento = u.birthDate,
+                errorNombre = null,
+                errorCorreo = null,
+                errorTelefono = null,
+                errorFechaNacimiento = null,
+                puedeGuardar = false,
+                mensaje = null
+            )
+        }
+    }
+
+    fun alternarModoEdicionPerfil() {
+        _perfil.update { it.copy(modoEdicion = !it.modoEdicion, mensaje = null) }
+    }
+
+    fun onPerfilNombreChange(value: String) {
+        val err = if (value.isBlank()) "El nombre es obligatorio." else null
+        _perfil.update { it.copy(nombre = value, errorNombre = err) }
+        recomputePerfilPuedeGuardar()
+    }
+
+
+    fun onPerfilEmailChange(value: String) {
+        // 1) Validación inmediata de formato
+        val errFormato = validateEmail(value)
+        _perfil.update { it.copy(correo = value, errorCorreo = errFormato) }
+        recomputePerfilPuedeGuardar()
+
+        // 2) Debounce para chequear unicidad solo si el formato es válido
+        emailPerfilCheckJob?.cancel()
+        emailPerfilCheckJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(350)
+
+            val s = _perfil.value
+            val actual = s.correo
+            if (s.errorCorreo != null || actual.isBlank()) {
+                recomputePerfilPuedeGuardar(); return@launch
+            }
+
+            // Excluir el email actual del usuario (permitir no-cambio)
+            val emailActual = SessionManager.user?.email.orEmpty()
+            val libre = repository.emailDisponible(actual, emailActual)
+            _perfil.update { it.copy(errorCorreo = if (!libre) "Correo ya registrado" else null) }
+            recomputePerfilPuedeGuardar()
+        }
+    }
+
+    fun onPerfilTelefonoChange(value: String) {
+        val digits = value.filter { it.isDigit() }
+        val errFormato = validateTelefono(digits)
+        _perfil.update { it.copy(telefono = digits, errorTelefono = errFormato) }
+        recomputePerfilPuedeGuardar()
+
+        phonePerfilCheckJob?.cancel()
+        phonePerfilCheckJob = viewModelScope.launch {
+            delay(350)
+            val s = _perfil.value
+            val actual = s.telefono
+            if (s.errorTelefono != null || actual.isBlank()) {
+                recomputePerfilPuedeGuardar(); return@launch
+            }
+            val rut = SessionManager.user?.rut
+            if (rut.isNullOrBlank()) {
+                recomputePerfilPuedeGuardar(); return@launch
+            }
+            val libre = repository.telefonoDisponible(actual, rut)
+            _perfil.update { it.copy(errorTelefono = if (!libre) "El teléfono ya está registrado por otro usuario." else null) }
+            recomputePerfilPuedeGuardar()
+        }
+    }
+
+    fun onPerfilDireccionChange(value: String) {
+        _perfil.update { it.copy(direccion = value) }
+        recomputePerfilPuedeGuardar()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun onPerfilFechaChange(value: String) {
+        val err = validateBirthDate(value, 15)
+        _perfil.update { it.copy(fechaNacimiento = value, errorFechaNacimiento = err) }
+        recomputePerfilPuedeGuardar()
+    }
+
+    private fun recomputePerfilPuedeGuardar() {
+        val s = _perfil.value
+        val okNombre = s.errorNombre == null && s.nombre.isNotBlank()
+        val okCorreo = s.errorCorreo == null && s.correo.isNotBlank()
+        val okTel = s.errorTelefono == null
+        val okFecha = s.errorFechaNacimiento == null && s.fechaNacimiento.isNotBlank()
+        val okDir = s.direccion.isNotBlank()
+        _perfil.update { it.copy(puedeGuardar = okNombre && okTel && okFecha && okDir) }
+    }
+
+    fun submitPerfilGuardar() {
+        val s = _perfil.value
+        if (!s.puedeGuardar || s.cargando) return
+
+        val rut = SessionManager.user?.rut
+        if (rut.isNullOrBlank()) {
+            _perfil.update { it.copy(mensaje = "Sesión no disponible.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _perfil.update { it.copy(cargando = true, mensaje = null) }
+
+            if (s.telefono.isNotBlank()) {
+                val libre = repository.telefonoDisponible(s.telefono, rut)
+                if (!libre) {
+                    _perfil.update { it.copy(cargando = false, mensaje = "El teléfono ya está registrado por otro usuario.") }
+                    return@launch
+                }
+            }
+
+            val emailActual = SessionManager.user?.email.orEmpty()
+            val libreMail = repository.emailDisponible(s.correo, emailActual)
+            if (!libreMail) {
+                _perfil.update { it.copy(cargando = false, mensaje = "El correo ya está registrado por otro usuario.") }
+                return@launch
+            }
+
+
+            val r = repository.actualizarPerfil(
+                rut = rut,
+                nombre = s.nombre,
+                telefono = s.telefono.ifBlank { null },
+                direccion = s.direccion,
+                fechaNacimiento = s.fechaNacimiento,
+                emailNuevo = s.correo
+            )
+
+            if (r.isSuccess) {
+                SessionManager.persistToStore(appContext)
+                _perfil.update { it.copy(cargando = false, modoEdicion = false, mensaje = "Perfil actualizado correctamente.") }
+            } else {
+                _perfil.update { it.copy(cargando = false, mensaje = r.exceptionOrNull()?.message ?: "No se pudo actualizar el perfil.") }
+            }
+        }
     }
 }
