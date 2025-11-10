@@ -96,16 +96,33 @@ private fun calculardv(numero: String, dvEsperado: String): Boolean {
     return dvCalculado == dvEsperado
 }
 
-    fun validateBirthDate(value: String): String? {
-    if (value.isBlank()) return "Fecha de nacimiento obligatoria"
+@RequiresApi(Build.VERSION_CODES.O)
+fun validateBirthDate(value: String, edadMinima: Int = 15): String? {
+    if (value.isBlank()) return "La fecha de nacimiento es obligatoria."
     return try {
-        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-        sdf.isLenient = false
-        val date = sdf.parse(value) ?: return "Formato inválido (usa yyyy-MM-dd)"
-        val today = java.util.Date()
-        if (date.after(today)) "La fecha no puede ser futura" else null
+        // Parse y validación de fecha real
+        val partes = value.split("-")
+        if (partes.size != 3) return "Formato inválido. Usa yyyy-MM-dd."
+        val anio = partes[0].toInt()
+        val mes  = partes[1].toInt()
+        val dia  = partes[2].toInt()
+
+        val fecha = java.time.LocalDate.of(anio, mes, dia)
+        val hoy   = java.time.LocalDate.now()
+
+        if (fecha.isAfter(hoy)) return "La fecha no puede ser futura."
+
+        val edad = java.time.Period.between(fecha, hoy).years
+        if (edad < edadMinima) return "Debes tener al menos $edadMinima años para registrarte."
+
+        null
     } catch (_: Exception) {
-        "Formato inválido (usa yyyy-MM-dd)"
+        "Formato inválido. Usa yyyy-MM-dd."
     }
 }
+
+
+
+
+
 

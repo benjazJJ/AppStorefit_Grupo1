@@ -1,5 +1,7 @@
 package com.example.appstorefit_grupo1.ViewModel
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.appstorefit_grupo1.data.repository.UserRepository
@@ -209,6 +211,7 @@ class AuthViewModel(
         recomputeRegisterCanSubmit()
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun onBirthDateChange(value: String) {
         _register.update {
             it.copy(

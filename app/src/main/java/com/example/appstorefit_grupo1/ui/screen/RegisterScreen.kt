@@ -1,5 +1,7 @@
 package com.example.appstorefit_grupo1.ui.screen
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -32,6 +34,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState
 
 // VM Wrapper
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RegisterScreenVm(
     widthClass: WindowWidthSizeClass,
