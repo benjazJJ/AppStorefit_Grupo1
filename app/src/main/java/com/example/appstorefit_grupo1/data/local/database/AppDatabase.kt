@@ -41,7 +41,7 @@ import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeEntity
         CompraEntity::class,
         CompraDetalleEntity::class
     ],
-    version = 38,
+    version = 39,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
