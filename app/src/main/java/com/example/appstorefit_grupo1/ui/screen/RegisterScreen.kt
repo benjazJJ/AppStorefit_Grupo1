@@ -330,7 +330,7 @@ private fun RegisterScreen(
                 OutlinedButton(
                     onClick = onGoLogin,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Ir a Login") }
+                ) { Text("Iniciar Sesión") }
             }
         }
     }
