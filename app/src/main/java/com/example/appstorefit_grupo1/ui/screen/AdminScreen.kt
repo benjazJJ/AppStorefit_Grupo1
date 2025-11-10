@@ -4,6 +4,8 @@ package com.example.appstorefit_grupo1.ui.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,11 +32,13 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -63,6 +67,7 @@ import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosUiState
 import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosViewModel
 import com.example.appstorefit_grupo1.ViewModel.AdminsUsersViewModelFactory
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
+import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -354,65 +359,58 @@ private fun AdminProductosTab() {
     val vm: AdminProductsViewModel = viewModel(factory = AdminProductsViewModelFactory(context))
 
     val productos by vm.productos.collectAsStateWithLifecycle()
-    val errorMsg by vm.error.collectAsStateWithLifecycle()
+    val errorMsg  by vm.error.collectAsStateWithLifecycle()
+    val form      by vm.form.collectAsStateWithLifecycle() // ← estado del formulario
+
     val cs = MaterialTheme.colorScheme
-
     var editing by remember { mutableStateOf<ProductosEntity?>(null) }
+    var search  by remember { mutableStateOf("") }
 
-    //Controles de filtro/búsqueda
-    var search by remember { mutableStateOf("") }
-    // null = Todas las categorías
-    var selectedCat: Long? by remember { mutableStateOf(null) }
+    // Cargar categorías desde Room
+    val categorias by androidx.compose.runtime.produceState(
+        initialValue = emptyList<com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity>(),
+        key1 = Unit
+    ) { value = AppDatabase.getInstance(context).categoriaDao().getAll() }
 
-    // categorías detectadas desde los datos
-    val categoriasIds = remember(productos) {
-        productos.map { it.idCategoria }.distinct().sorted()
-    }
+    // Filtro por categoría (null = todas)
+    var selectedCatId by remember { mutableStateOf<Long?>(null) }
 
-    // Filtrado + búsqueda
-    val filtrados = remember(productos, selectedCat, search) {
+    val filtrados = remember(productos, selectedCatId, search) {
         val s = search.trim()
-        productos
-            .asSequence()
-            .filter { selectedCat == null || it.idCategoria == selectedCat }
+        productos.asSequence()
+            .filter { selectedCatId == null || it.idCategoria == selectedCatId }
             .filter {
                 if (s.isEmpty()) true
-                else {
-                    it.modelo.contains(s, ignoreCase = true) ||
-                            it.color.contains(s, ignoreCase = true)  ||
-                            it.talla.contains(s, ignoreCase = true)
-                }
+                else it.modelo.contains(s, true) || it.color.contains(s, true) || it.talla.contains(s, true)
             }
             .toList()
     }
 
-    //Agrupación por modelo (por categoría+marca+modelo)
     val grupos = remember(filtrados) {
         filtrados.groupBy { Triple(it.idCategoria, it.marca, it.modelo) }
             .toSortedMap(compareBy<Triple<Long, String, String>>({ it.first }, { it.third }))
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Header
+        // Header con botón Añadir
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Catálogo de productos", style = MaterialTheme.typography.titleMedium)
+            Button(onClick = { vm.abrirCrear() }) {
+                Icon(Icons.Filled.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Añadir variante")
+            }
         }
 
-        // Error (si hay)
-        errorMsg?.let {
-            Text(it, color = cs.error)
-        }
+        errorMsg?.let { Text(it, color = cs.error) }
 
-        // Búsqueda
         OutlinedTextField(
             value = search,
             onValueChange = { search = it },
@@ -421,14 +419,12 @@ private fun AdminProductosTab() {
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Chips de categoría (solo las existentes)
-        CategoryFilterRow(
-            categorias = categoriasIds,
-            selected = selectedCat,
-            onSelect = { selectedCat = it }
+        CategoryDropdown(
+            categorias = categorias,
+            selectedId = selectedCatId,
+            onSelect = { selectedCatId = it }
         )
 
-        // Resumen conteo
         Text(
             "Mostrando ${filtrados.size} variantes en ${grupos.size} modelos",
             style = MaterialTheme.typography.bodySmall,
@@ -438,7 +434,6 @@ private fun AdminProductosTab() {
         if (filtrados.isEmpty()) {
             EmptyState("No hay productos que coincidan con los filtros.")
         } else {
-            // Lista por grupos (modelo)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 grupos.forEach { (clave, variantes) ->
                     val (catId, marca, modelo) = clave
@@ -456,7 +451,7 @@ private fun AdminProductosTab() {
         }
     }
 
-    //
+    // Diálogo rápido solo para stock (lápiz en la lista)
     editing?.let { producto ->
         EditVariantStockDialog(
             producto = producto,
@@ -467,7 +462,428 @@ private fun AdminProductosTab() {
             }
         )
     }
+
+    // Diálogo de crear/editar variante (botón “Añadir” o edición completa)
+    if (form.showForm) {
+        ProductoFormDialog(
+            form = form,
+            categorias = categorias,
+            onPickCategoria = { id -> vm.onIdCategoria(id.toString()) },
+            onMarca   = vm::onMarca,
+            onModelo  = vm::onModelo,
+            onColor   = vm::onColor,
+            onTalla   = vm::onTalla,
+            onPrecio  = vm::onPrecio,
+            onStock   = vm::onStock,
+            onGuardar = vm::confirmarGuardar,
+            onCancelar= vm::cerrarFormulario,
+            onEliminar= vm::confirmarEliminar
+        )
+    }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductoFormDialog(
+    form: com.example.appstorefit_grupo1.ViewModel.ProductoFormState,
+    categorias: List<com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity>,
+    onPickCategoria: (Long) -> Unit,
+    onMarca: (String) -> Unit,
+    onModelo: (String) -> Unit,
+    onColor: (String) -> Unit,
+    onTalla: (String) -> Unit,
+    onPrecio: (String) -> Unit,
+    onStock: (String) -> Unit,
+    onGuardar: () -> Unit,
+    onCancelar: () -> Unit,
+    onEliminar: () -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { if (!form.cargando) onCancelar() },
+        confirmButton = {}, // los botones viven dentro de la tarjeta
+        dismissButton = {},
+        text = {
+            ProductoFormCard(
+                form = form,
+                categorias = categorias,
+                onPickCategoria = onPickCategoria,
+                onMarca = onMarca,
+                onModelo = onModelo,
+                onColor = onColor,
+                onTalla = onTalla,
+                onPrecio = onPrecio,
+                onStock = onStock,
+                onGuardar = onGuardar,
+                onCancelar = onCancelar,
+                onEliminar = onEliminar
+            )
+        }
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CategoryDropdown(
+    categorias: List<com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity>,
+    selectedId: Long?,
+    onSelect: (Long?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val labelActual = categorias.firstOrNull { it.id == selectedId }?.nombre ?: "Todas las categorías"
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            value = labelActual,
+            onValueChange = { },
+            readOnly = true,
+            label = { Text("Categoría") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Todas las categorías") },
+                onClick = {
+                    onSelect(null)
+                    expanded = false
+                }
+            )
+            categorias.forEach { c ->
+                DropdownMenuItem(
+                    text = { Text(c.nombre) },
+                    onClick = {
+                        onSelect(c.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+
+// Tarjeta del formulario de Producto (crear/editar)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductoFormCard(
+    form: com.example.appstorefit_grupo1.ViewModel.ProductoFormState,
+    categorias: List<com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity>,
+    onPickCategoria: (Long) -> Unit,
+    onMarca: (String) -> Unit,
+    onModelo: (String) -> Unit,
+    onColor: (String) -> Unit,
+    onTalla: (String) -> Unit,
+    onPrecio: (String) -> Unit,
+    onStock: (String) -> Unit,
+    onGuardar: () -> Unit,
+    onCancelar: () -> Unit,
+    onEliminar: () -> Unit
+) {
+    val cs = MaterialTheme.colorScheme
+
+    // espaciamiento y altura mín. de los campos
+    val PAD = 16.dp
+    val GAP_V = 14.dp
+    val GAP_H = 14.dp
+    val FIELD_MIN = 56.dp
+
+    // si la pantalla es angosta, apilamos en una columna
+    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 380
+
+    var colorExpanded by remember { mutableStateOf(false) }
+    var tallaExpanded by remember { mutableStateOf(false) }
+    var catExpanded   by remember { mutableStateOf(false) }
+
+    val colores = listOf("Blanco con detalles negros", "Negro con detalles blancos")
+    val tallas  = listOf("XS","S","M","L","XL")
+    val catSeleccionada = categorias.firstOrNull { it.id.toString() == form.idCategoria }
+
+    ElevatedCard {
+        Column(
+            modifier = Modifier
+                .padding(PAD)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(GAP_V)
+        ) {
+            Text(if (form.modoEdicion) "Editar variante" else "Crear variante",
+                fontWeight = FontWeight.SemiBold)
+
+            // Categoría (full width)
+            if (!form.modoEdicion) {
+                ExposedDropdownMenuBox(
+                    expanded = catExpanded,
+                    onExpandedChange = { catExpanded = !catExpanded }
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                            .heightIn(min = FIELD_MIN),
+                        value = catSeleccionada?.nombre ?: "Selecciona categoría",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Categoría") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = catExpanded) },
+                        isError = form.errorIdCategoria != null
+                    )
+                    ExposedDropdownMenu(
+                        expanded = catExpanded,
+                        onDismissRequest = { catExpanded = false }
+                    ) {
+                        categorias.forEach { c ->
+                            DropdownMenuItem(
+                                text = { Text(c.nombre) },
+                                onClick = {
+                                    onPickCategoria(c.id)
+                                    catExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                form.errorIdCategoria?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+            } else {
+                OutlinedTextField(
+                    value = catSeleccionada?.nombre ?: form.idCategoria,
+                    onValueChange = {},
+                    label = { Text("Categoría") },
+                    readOnly = true,
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = FIELD_MIN)
+                )
+            }
+
+            // Marca + Modelo
+            if (narrow) {
+                OutlinedTextField(
+                    value = form.marca, onValueChange = onMarca, label = { Text("Marca") },
+                    singleLine = true, isError = form.errorMarca != null,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = FIELD_MIN)
+                )
+                OutlinedTextField(
+                    value = form.modelo, onValueChange = onModelo, label = { Text("Modelo") },
+                    singleLine = true, isError = form.errorModelo != null,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = FIELD_MIN)
+                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(GAP_H), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = form.marca, onValueChange = onMarca, label = { Text("Marca") },
+                        singleLine = true, isError = form.errorMarca != null,
+                        modifier = Modifier.weight(1f).heightIn(min = FIELD_MIN)
+                    )
+                    OutlinedTextField(
+                        value = form.modelo, onValueChange = onModelo, label = { Text("Modelo") },
+                        singleLine = true, isError = form.errorModelo != null,
+                        modifier = Modifier.weight(1f).heightIn(min = FIELD_MIN)
+                    )
+                }
+            }
+            form.errorMarca?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+            form.errorModelo?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+            // Color + Talla
+            if (narrow) {
+                // Color
+                ExposedDropdownMenuBox(
+                    expanded = colorExpanded,
+                    onExpandedChange = { colorExpanded = !colorExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = form.color.ifBlank { "Selecciona color" },
+                        onValueChange = {}, readOnly = true, label = { Text("Color") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(colorExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth().heightIn(min = FIELD_MIN),
+                        isError = form.errorColor != null
+                    )
+                    ExposedDropdownMenu(expanded = colorExpanded, onDismissRequest = { colorExpanded = false }) {
+                        colores.forEach { c -> DropdownMenuItem(text = { Text(c) }, onClick = { onColor(c); colorExpanded = false }) }
+                    }
+                }
+                // Talla
+                ExposedDropdownMenuBox(
+                    expanded = tallaExpanded,
+                    onExpandedChange = { tallaExpanded = !tallaExpanded }
+                ) {
+                    OutlinedTextField(
+                        value = form.talla.ifBlank { "Selecciona talla" },
+                        onValueChange = {}, readOnly = true, label = { Text("Talla") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(tallaExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth().heightIn(min = FIELD_MIN),
+                        isError = form.errorTalla != null
+                    )
+                    ExposedDropdownMenu(expanded = tallaExpanded, onDismissRequest = { tallaExpanded = false }) {
+                        tallas.forEach { t -> DropdownMenuItem(text = { Text(t) }, onClick = { onTalla(t); tallaExpanded = false }) }
+                    }
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(GAP_H), modifier = Modifier.fillMaxWidth()) {
+                    ExposedDropdownMenuBox(
+                        expanded = colorExpanded,
+                        onExpandedChange = { colorExpanded = !colorExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = form.color.ifBlank { "Selecciona color" },
+                            onValueChange = {}, readOnly = true, label = { Text("Color") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(colorExpanded) },
+                            modifier = Modifier.menuAnchor().heightIn(min = FIELD_MIN),
+                            isError = form.errorColor != null
+                        )
+                        ExposedDropdownMenu(expanded = colorExpanded, onDismissRequest = { colorExpanded = false }) {
+                            colores.forEach { c -> DropdownMenuItem(text = { Text(c) }, onClick = { onColor(c); colorExpanded = false }) }
+                        }
+                    }
+                    ExposedDropdownMenuBox(
+                        expanded = tallaExpanded,
+                        onExpandedChange = { tallaExpanded = !tallaExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = form.talla.ifBlank { "Selecciona talla" },
+                            onValueChange = {}, readOnly = true, label = { Text("Talla") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(tallaExpanded) },
+                            modifier = Modifier.menuAnchor().heightIn(min = FIELD_MIN),
+                            isError = form.errorTalla != null
+                        )
+                        ExposedDropdownMenu(expanded = tallaExpanded, onDismissRequest = { tallaExpanded = false }) {
+                            tallas.forEach { t -> DropdownMenuItem(text = { Text(t) }, onClick = { onTalla(t); tallaExpanded = false }) }
+                        }
+                    }
+                }
+            }
+            form.errorColor?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+            form.errorTalla?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+            // Precio + Stock
+            if (narrow) {
+                OutlinedTextField(
+                    value = form.precio, onValueChange = onPrecio, label = { Text("Precio (CLP)") },
+                    singleLine = true, isError = form.errorPrecio != null,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = FIELD_MIN)
+                )
+                OutlinedTextField(
+                    value = form.stock, onValueChange = onStock, label = { Text("Stock") },
+                    singleLine = true, isError = form.errorStock != null,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = FIELD_MIN)
+                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(GAP_H), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = form.precio, onValueChange = onPrecio, label = { Text("Precio (CLP)") },
+                        singleLine = true, isError = form.errorPrecio != null,
+                        modifier = Modifier.weight(1f).heightIn(min = FIELD_MIN)
+                    )
+                    OutlinedTextField(
+                        value = form.stock, onValueChange = onStock, label = { Text("Stock") },
+                        singleLine = true, isError = form.errorStock != null,
+                        modifier = Modifier.weight(1f).heightIn(min = FIELD_MIN)
+                    )
+                }
+            }
+            form.errorPrecio?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+            form.errorStock?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
+
+            // Botones
+            Row(horizontalArrangement = Arrangement.spacedBy(GAP_H), modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onGuardar,
+                    enabled = form.puedeGuardar && !form.cargando,
+                    modifier = Modifier.weight(1f).heightIn(min = FIELD_MIN)
+                ) { Text(if (form.modoEdicion) "Guardar" else "Crear") }
+
+                OutlinedButton(
+                    onClick = onCancelar,
+                    enabled = !form.cargando,
+                    modifier = Modifier.weight(1f).heightIn(min = FIELD_MIN)
+                ) { Text("Cancelar") }
+            }
+
+            if (form.modoEdicion) {
+                var askDelete by remember { mutableStateOf(false) }
+                TextButton(onClick = { askDelete = true }, enabled = !form.cargando) {
+                    Text("Eliminar variante", color = cs.error)
+                }
+                if (askDelete) {
+                    AlertDialog(
+                        onDismissRequest = { askDelete = false },
+                        title = { Text("Eliminar variante") },
+                        text = { Text("Esta acción no se puede deshacer. ¿Deseas continuar?") },
+                        confirmButton = { TextButton(onClick = { askDelete = false; onEliminar() }) { Text("Eliminar") } },
+                        dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancelar") } }
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+
+// Tarjeta por grupo (modelo) con acciones para editar variante completa o stock
+@Composable
+private fun GroupedProductCard(
+    catId: Long,
+    marca: String,
+    modelo: String,
+    variantes: List<ProductosEntity>,
+    onEditFull: (ProductosEntity) -> Unit,
+    onEditStock: (ProductosEntity) -> Unit
+) {
+    ElevatedCard {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("$marca • $modelo", fontWeight = FontWeight.SemiBold)
+            Text(
+                "Categoría: $catId · Variantes: ${variantes.size}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Divider()
+
+            variantes.sortedWith(compareBy<ProductosEntity>({ it.color }, { it.talla }))
+                .forEach { v ->
+                    VariantRow(v = v, onEditFull = onEditFull, onEditStock = onEditStock)
+                }
+        }
+    }
+}
+
+// Fila de variante con dos acciones: editar completa y stock
+@Composable
+private fun VariantRow(
+    v: ProductosEntity,
+    onEditFull: (ProductosEntity) -> Unit,
+    onEditStock: (ProductosEntity) -> Unit
+) {
+    ListItem(
+        headlineContent = { Text("Color: ${v.color} • Talla: ${v.talla}") },
+        supportingContent = {
+            Text("Precio: ${formatCLP(v.precio)} · Stock: ${v.stock}")
+        },
+        trailingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(onClick = { onEditFull(v) }) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Editar variante")
+                }
+                IconButton(onClick = { onEditStock(v) }) {
+                    Icon(Icons.Filled.Inventory2, contentDescription = "Editar stock")
+                }
+            }
+        }
+    )
+}
+
 
 
 @Composable

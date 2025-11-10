@@ -15,6 +15,8 @@ interface CategoriaDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(categoria: CategoriaEntity): Long
 
+
+
     // Obtiene por id
     @Query("SELECT * FROM categoria WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): CategoriaEntity?
@@ -24,12 +26,15 @@ interface CategoriaDao {
     suspend fun getByNombre(nombre: String): CategoriaEntity?
 
     // Cantidad total (útil para seed)
+
+
     @Query("SELECT COUNT(*) FROM categoria")
     suspend fun count(): Int
 
-    // Lista completa (orden asc por id)
-    @Query("SELECT * FROM categoria ORDER BY id ASC")
+    // Lista completa
+    @Query("SELECT * FROM categoria ORDER BY id")
     suspend fun getAll(): List<CategoriaEntity>
+
 
     @Update
     suspend fun update(categoria: CategoriaEntity): Int
@@ -60,4 +65,7 @@ interface CategoriaDao {
 
     @Query("DELETE FROM categoria WHERE id = :id")
     suspend fun deleteById(id: Long): Int
+
+
+
 }
