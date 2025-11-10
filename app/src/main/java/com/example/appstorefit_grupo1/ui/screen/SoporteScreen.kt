@@ -1,6 +1,6 @@
 package com.example.appstorefit_grupo1.ui.screen
 
-
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,7 +16,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.appstorefit_grupo1.ViewModel.MensajesViewModel
 import com.example.appstorefit_grupo1.ViewModel.MensajesViewModelFactory
 import com.example.appstorefit_grupo1.session.SessionManager
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,10 +36,50 @@ fun SoporteScreen() {
         return
     }
 
+    // ===== Helpers y estados =====
+    fun rutToStableLong(rut: String?): Long {
+        if (rut.isNullOrBlank()) return 0L
+        val onlyDigits = rut.filter { it.isDigit() }
+        return onlyDigits.toLongOrNull() ?: rut.hashCode().toLong()
+    }
+    fun fmt(ts: Long): String =
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(ts))
+
+    val soporteId = remember(SessionManager.user?.rut) {
+        rutToStableLong(SessionManager.user?.rut)
+    }
+
     val inbox by mensajesVm
         .observarBandejaSoporte(3)
         .collectAsStateWithLifecycle(initialValue = emptyList())
 
+    // Diálogo de respuesta
+    var dialogOpenForThread by remember { mutableStateOf<Long?>(null) }
+    var dialogClienteId by remember { mutableStateOf<Long?>(null) }
+    var respuestaTexto by remember { mutableStateOf("") }
+
+    val respuestaState by mensajesVm.respuesta.collectAsStateWithLifecycle()
+
+    LaunchedEffect(respuestaState.ok, respuestaState.error) {
+        when {
+            respuestaState.ok -> {
+                Toast.makeText(context, "Respuesta enviada", Toast.LENGTH_SHORT).show()
+                // Cerrar y limpiar
+                dialogOpenForThread = null
+                dialogClienteId = null
+                respuestaTexto = ""
+                mensajesVm.limpiarEstadoRespuesta()
+            }
+            respuestaState.error != null -> {
+                Toast.makeText(
+                    context,
+                    respuestaState.error ?: "No se pudo responder",
+                    Toast.LENGTH_SHORT
+                ).show()
+                mensajesVm.limpiarEstadoRespuesta()
+            }
+        }
+    }
     Scaffold(
         topBar = { TopAppBar(title = { Text("Bandeja de Soporte") }) }
     ) { inner ->
@@ -66,16 +108,30 @@ fun SoporteScreen() {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    Date(msg.createdAt).toString(),
+                                    fmt(msg.createdAt),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = cs.onSurfaceVariant
                                 )
-                                if (!msg.read) {
-                                    TextButton(onClick = { mensajesVm.marcarComoLeido(msg.id) }) {
-                                        Text("Marcar leído")
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (!msg.read) {
+                                        TextButton(onClick = { mensajesVm.marcarComoLeido(msg.id) }) {
+                                            Text("Marcar leído")
+                                        }
+                                    } else {
+                                        Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = cs.primary)
                                     }
-                                } else {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = cs.primary)
+
+                                    Spacer(Modifier.width(8.dp))
+
+                                    // ===== Botón Responder (al lado de Marcar leído) =====
+                                    TextButton(onClick = {
+                                        val tid = msg.threadId ?: msg.id
+                                        dialogOpenForThread = tid
+                                        dialogClienteId = msg.senderUserId
+                                        respuestaTexto = ""
+                                    }) {
+                                        Text("Responder")
+                                    }
                                 }
                             }
                         }
@@ -83,5 +139,46 @@ fun SoporteScreen() {
                 }
             }
         }
+    }
+
+    // ===== Diálogo para escribir y enviar respuesta =====
+    if (dialogOpenForThread != null && dialogClienteId != null) {
+        AlertDialog(
+            onDismissRequest = {
+                dialogOpenForThread = null
+                dialogClienteId = null
+                respuestaTexto = ""
+            },
+            title = { Text("Respuesta al cliente") },
+            text = {
+                OutlinedTextField(
+                    value = respuestaTexto,
+                    onValueChange = { respuestaTexto = it },
+                    label = { Text("Escribe la respuesta") },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = respuestaTexto.isNotBlank() && !respuestaState.enviando,
+                    onClick = {
+                        mensajesVm.responderMensaje(
+                            threadId = dialogOpenForThread!!,
+                            idUsuarioSoporte = soporteId,
+                            idUsuarioCliente = dialogClienteId!!,
+                            contenido = respuestaTexto
+                        )
+                    }
+                ) { Text(if (respuestaState.enviando) "Enviando..." else "Enviar") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    dialogOpenForThread = null
+                    dialogClienteId = null
+                    respuestaTexto = ""
+                }) { Text("Cancelar") }
+            }
+        )
     }
 }

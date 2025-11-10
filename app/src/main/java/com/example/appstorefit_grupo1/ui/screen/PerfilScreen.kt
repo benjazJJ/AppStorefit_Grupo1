@@ -568,7 +568,103 @@ fun PerfilScreen(navController: NavController) {
                         ) { Text(if (envio.enviando) "Enviando..." else "Enviar a Soporte") }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // MENSAJES DE SOPORTE (Cliente)
+
+                    // Orden: false = más reciente → más antiguo (default), true = más antiguo → más reciente
+                    var asc by rememberSaveable { mutableStateOf(false) }
+
+                    fun fmt(ts: Long): String =
+                        java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+                            .format(java.util.Date(ts))
+
+                    val userIdStable = remember(u.rut) { rutToStableLong(u.rut) }
+                    val outbox by mensajesVm
+                        .observarOutboxClienteConRespuesta(userIdStable, asc)
+                        .collectAsStateWithLifecycle(initialValue = emptyList())
+
+                    ElevatedCard(
+                        colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Mensajes de soporte", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+                                TextButton(onClick = { asc = !asc }) {
+                                    Text(if (asc) "Orden: antiguo → reciente" else "Orden: reciente → antiguo")
+                                }
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            if (outbox.isEmpty()) {
+                                Text(
+                                    "Aún no has enviado mensajes.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = cs.onSurfaceVariant
+                                )
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    outbox.forEach { item ->
+                                        val m = item.clienteMensaje
+                                        val r = item.respuesta
+                                        ElevatedCard(
+                                            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+                                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column(Modifier.padding(12.dp)) {
+                                                // Cabecera: fecha + estado leído
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(fmt(m.createdAt), style = MaterialTheme.typography.labelLarge)
+                                                    val estado = if (m.read) "Leído" else "No leído"
+                                                    AssistChip(
+                                                        onClick = {},
+                                                        label = { Text(estado) }
+                                                    )
+                                                }
+
+                                                Spacer(Modifier.height(6.dp))
+                                                Text(m.content, style = MaterialTheme.typography.bodyLarge)
+
+                                                Spacer(Modifier.height(10.dp))
+                                                Divider()
+
+                                                Spacer(Modifier.height(10.dp))
+                                                Text("Respuesta del soporte", style = MaterialTheme.typography.labelLarge)
+
+                                                if (r != null) {
+                                                    Spacer(Modifier.height(4.dp))
+                                                    Text(r.content, style = MaterialTheme.typography.bodyMedium)
+                                                } else {
+                                                    Spacer(Modifier.height(4.dp))
+                                                    Text(
+                                                        "No se ha respondido el mensaje",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = cs.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
             }
         }
     }
