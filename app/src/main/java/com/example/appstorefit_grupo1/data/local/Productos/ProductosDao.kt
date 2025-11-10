@@ -99,6 +99,26 @@ interface ProductosDao {
         talla: String
     ): Int
 
+    // Evitar duplicados al editar (excluyendo el propio id_categoria + id_producto)
+    @Query("""
+    SELECT COUNT(*) FROM producto
+    WHERE id_categoria = :idCategoria
+      AND modelo = :modelo
+      AND color  = :color
+      AND talla  = :talla
+      AND (id_categoria <> :idCategoria OR id_producto <> :idProducto)
+""")
+    suspend fun countByCatModeloColorTallaExceptoId(
+        idCategoria: Long,
+        idProducto: Long,
+        modelo: String,
+        color: String,
+        talla: String
+    ): Int
+
+
+
+
 
     // Streams reactivos (Room -> Flow)
     @Query("SELECT * FROM producto ORDER BY id_categoria, id_producto")
