@@ -1,4 +1,4 @@
-package com.example.appstorefit_grupo1.ViewModel
+package com.example.appstorefit_grupo1.ui.ViewModel
 
 
 import androidx.lifecycle.ViewModel

@@ -32,7 +32,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -57,17 +56,18 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.appstorefit_grupo1.ViewModel.AdminCategoriasViewModel
-import com.example.appstorefit_grupo1.ViewModel.AdminCategoriasViewModelFactory
-import com.example.appstorefit_grupo1.ViewModel.AdminProductsViewModel
-import com.example.appstorefit_grupo1.ViewModel.AdminProductsViewModelFactory
-import com.example.appstorefit_grupo1.ViewModel.AdminReportesViewModel
-import com.example.appstorefit_grupo1.ViewModel.AdminReportesViewModelFactory
-import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosUiState
-import com.example.appstorefit_grupo1.ViewModel.AdminUsuariosViewModel
-import com.example.appstorefit_grupo1.ViewModel.AdminsUsersViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminCategoriasViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminCategoriasViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminProductsViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminProductsViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminReportesViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminReportesViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminUsuariosUiState
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminUsuariosViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AdminsUsersViewModelFactory
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
+import com.example.appstorefit_grupo1.ui.ViewModel.ProductoFormState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -485,7 +485,7 @@ private fun AdminProductosTab() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProductoFormDialog(
-    form: com.example.appstorefit_grupo1.ViewModel.ProductoFormState,
+    form: ProductoFormState,
     categorias: List<com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity>,
     onPickCategoria: (Long) -> Unit,
     onMarca: (String) -> Unit,
@@ -577,7 +577,7 @@ private fun CategoryDropdown(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProductoFormCard(
-    form: com.example.appstorefit_grupo1.ViewModel.ProductoFormState,
+    form: ProductoFormState,
     categorias: List<com.example.appstorefit_grupo1.data.local.Categoria.CategoriaEntity>,
     onPickCategoria: (Long) -> Unit,
     onMarca: (String) -> Unit,

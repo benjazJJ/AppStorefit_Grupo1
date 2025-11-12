@@ -16,8 +16,8 @@ import com.example.appstorefit_grupo1.navigation.Route
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.appstorefit_grupo1.ViewModel.CarritoViewModel
-import com.example.appstorefit_grupo1.ViewModel.CarritoViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModelFactory
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 
 @Composable

@@ -34,8 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.appstorefit_grupo1.session.SessionManager
-import com.example.appstorefit_grupo1.ViewModel.ComprasViewModel
-import com.example.appstorefit_grupo1.ViewModel.ComprasViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.ComprasViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.ComprasViewModelFactory
 import com.example.appstorefit_grupo1.ui.theme.SF_Blue
 import com.example.appstorefit_grupo1.ui.theme.SF_Purple
 import com.example.appstorefit_grupo1.ui.theme.SF_Teal

@@ -31,8 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
-import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModelFactory
 import com.example.appstorefit_grupo1.session.SessionManager
 import com.example.appstorefit_grupo1.ui.components.SuccessLoginDialog
 

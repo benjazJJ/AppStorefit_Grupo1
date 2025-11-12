@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.appstorefit_grupo1.ViewModel.MensajesViewModel
-import com.example.appstorefit_grupo1.ViewModel.MensajesViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.MensajesViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.MensajesViewModelFactory
 import com.example.appstorefit_grupo1.session.SessionManager
 import java.text.SimpleDateFormat
 import java.util.Date

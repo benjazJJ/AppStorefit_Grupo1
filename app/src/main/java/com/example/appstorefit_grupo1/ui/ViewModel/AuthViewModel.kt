@@ -1,5 +1,6 @@
-package com.example.appstorefit_grupo1.ViewModel
+package com.example.appstorefit_grupo1.ui.ViewModel
 
+import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
@@ -82,7 +83,7 @@ data class PerfilUiState(
 
 class AuthViewModel(
     private val repository: UserRepository,
-    private val appContext: android.content.Context
+    private val appContext: Context
 ) : ViewModel() {
 
     // Login/Registro
@@ -321,7 +322,7 @@ class AuthViewModel(
         // 2) Debounce para chequear unicidad solo si el formato es válido
         emailPerfilCheckJob?.cancel()
         emailPerfilCheckJob = viewModelScope.launch {
-            kotlinx.coroutines.delay(350)
+            delay(350)
 
             val s = _perfil.value
             val actual = s.correo

@@ -27,8 +27,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.example.appstorefit_grupo1.ViewModel.AuthViewModel
-import com.example.appstorefit_grupo1.ViewModel.AuthViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModelFactory
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState

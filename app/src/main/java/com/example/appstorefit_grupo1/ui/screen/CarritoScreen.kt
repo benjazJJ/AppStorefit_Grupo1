@@ -30,10 +30,10 @@ import com.example.appstorefit_grupo1.data.repository.ItemCarritoSnapshot
 import com.example.appstorefit_grupo1.session.SessionManager
 import kotlinx.coroutines.launch
 import com.example.appstorefit_grupo1.R
-import com.example.appstorefit_grupo1.ViewModel.CarritoViewModel
-import com.example.appstorefit_grupo1.ViewModel.CarritoViewModelFactory
-import com.example.appstorefit_grupo1.ViewModel.ComprasViewModel
-import com.example.appstorefit_grupo1.ViewModel.ComprasViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.ComprasViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.ComprasViewModelFactory
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.navigation.Route
 import com.example.appstorefit_grupo1.ui.components.SuccessCheckoutDialog

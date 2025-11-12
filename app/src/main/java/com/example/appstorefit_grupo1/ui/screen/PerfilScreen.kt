@@ -33,12 +33,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.appstorefit_grupo1.ViewModel.*
 import com.example.appstorefit_grupo1.ui.components.CampoReadOnlyDegradado
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 import com.example.appstorefit_grupo1.navigation.Route
 import com.example.appstorefit_grupo1.session.SessionManager
+import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.MensajesViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.MensajesViewModelFactory
 import com.example.appstorefit_grupo1.ui.theme.SF_Blue
 import com.example.appstorefit_grupo1.ui.theme.SF_Purple
 import com.example.appstorefit_grupo1.ui.theme.SF_Teal

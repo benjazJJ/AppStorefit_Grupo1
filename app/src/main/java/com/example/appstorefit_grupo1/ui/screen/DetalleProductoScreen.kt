@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.appstorefit_grupo1.R
-import com.example.appstorefit_grupo1.ViewModel.CarritoViewModel
-import com.example.appstorefit_grupo1.ViewModel.CarritoViewModelFactory
+import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModelFactory
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.repository.ProductosRepository
