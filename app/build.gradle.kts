@@ -102,8 +102,22 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     //CONVERSOR
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    //INtercwptor HTTP
+    //Interceptor HTTP
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
+    //Librerias para test unitarias locales
+    testImplementation(libs.junit)
+    testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.robolectric:robolectric:4.13")
+
+    //Librerias para test de implementación de interfaz gráfica
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    //reglas adicionales
+    androidTestImplementation("androidx.test:core-ktx:1.5.0")
+    androidTestImplementation("androidx.test:rules:1.5.0")
 }
