@@ -6,26 +6,26 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object RemoteModule {
-    private const val BASE_URL= "https://jsonplaceholder.typicode.com/"
 
-    //interceptar el login
+    // Interceptor para ver las peticiones/respuestas en Logcat (útil mientras desarrollamos)
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    //Cliente
-    private val okhttp = OkHttpClient.Builder()
+    // Cliente HTTP compartido
+    private val okHttp = OkHttpClient.Builder()
         .addInterceptor(logging)
         .build()
 
-    //Retorefit
+    // Crea un Retrofit con la base URL que le pases
+    private fun buildRetrofit(baseUrl: String): Retrofit =
+        Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttp)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
 
-    private val retrofit: Retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okhttp)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-
-    fun <T> create(service: Class<T>): T = retrofit.create(service)
-
+    // Métod0 genérico para crear cualquier API
+    fun <T> create(baseUrl: String, service: Class<T>): T =
+        buildRetrofit(baseUrl).create(service)
 }

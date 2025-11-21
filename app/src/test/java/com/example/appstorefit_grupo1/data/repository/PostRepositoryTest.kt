@@ -1,7 +1,5 @@
 package com.example.appstorefit_grupo1.data.repository
 
-import com.example.appstorefit_grupo1.data.remote.dto.JsonPlaceholderApi
-import com.example.appstorefit_grupo1.data.remote.dto.PostDto
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
