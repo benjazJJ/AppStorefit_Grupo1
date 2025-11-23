@@ -9,16 +9,65 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,8 +82,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.appstorefit_grupo1.ui.components.CampoReadOnlyDegradado
-import com.example.appstorefit_grupo1.data.local.database.AppDatabase
+import com.example.appstorefit_grupo1.data.remote.RemoteModule
+import com.example.appstorefit_grupo1.data.remote.ServiceUrls
+import com.example.appstorefit_grupo1.data.remote.users.UsersApi
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 import com.example.appstorefit_grupo1.navigation.Route
 import com.example.appstorefit_grupo1.session.SessionManager
@@ -42,6 +92,7 @@ import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModel
 import com.example.appstorefit_grupo1.ui.ViewModel.AuthViewModelFactory
 import com.example.appstorefit_grupo1.ui.ViewModel.MensajesViewModel
 import com.example.appstorefit_grupo1.ui.ViewModel.MensajesViewModelFactory
+import com.example.appstorefit_grupo1.ui.components.CampoReadOnlyDegradado
 import com.example.appstorefit_grupo1.ui.theme.SF_Blue
 import com.example.appstorefit_grupo1.ui.theme.SF_Purple
 import com.example.appstorefit_grupo1.ui.theme.SF_Teal
@@ -51,18 +102,17 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Helpers de cámara
 private fun createTempImageFile(context: Context): File {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val storageDir = File(context.cacheDir, "images").apply { if (!exists()) mkdirs() }
-    return File(storageDir, "IMG_${timeStamp}.jpg")
+    return File(storageDir, "IMG_.jpg")
 }
+
 private fun getImageUriForFile(context: Context, file: File): Uri {
     val authority = "${context.packageName}.fileprovider"
     return FileProvider.getUriForFile(context, authority, file)
 }
 
-// Id estable desde RUT (para soporte)
 private fun rutToStableLong(rut: String): Long {
     val onlyDigits = rut.filter { it.isDigit() }
     return onlyDigits.toLongOrNull() ?: rut.hashCode().toLong()
@@ -79,22 +129,23 @@ fun PerfilScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // VM de auth (perfil integrado)
     val vm: AuthViewModel = viewModel(factory = AuthViewModelFactory(context))
     val perfil by vm.perfil.collectAsStateWithLifecycle()
 
-    // VM de mensajes (se mantiene)
     val mensajesVm: MensajesViewModel = viewModel(factory = MensajesViewModelFactory(context))
     val envio by mensajesVm.envio.collectAsStateWithLifecycle()
     var mensajeTexto by rememberSaveable { mutableStateOf("") }
 
-    // User para mostrar email/rut/rol + foto
     var user by remember { mutableStateOf(SessionManager.user) }
     val roleId = SessionManager.roleId
 
-    // Foto (flujo independiente)
-    val db = remember { AppDatabase.getInstance(context) }
-    val repo = remember { UserRepository(db, db.userDao(), db.registroDao(), db.rolDao()) }
+    val usersApi = remember {
+        RemoteModule.create(
+            baseUrl = ServiceUrls.USERS_BASE_URL,
+            service = UsersApi::class.java
+        )
+    }
+    val repo = remember { UserRepository(api = usersApi) }
     var photoUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -125,7 +176,7 @@ fun PerfilScreen(navController: NavController) {
         if (uri != null) {
             val finalUri = uri.toString()
             photoUriString = finalUri
-            Toast.makeText(context, "Foto seleccionada desde galería", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Foto seleccionada desde galeria", Toast.LENGTH_SHORT).show()
             val emailActual = SessionManager.user?.email
             if (!emailActual.isNullOrBlank()) {
                 scope.launch {
@@ -137,7 +188,6 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // Al entrar: cargar perfil y refrescar foto
     LaunchedEffect(Unit) {
         vm.cargarPerfil()
         val email = user?.email
@@ -150,7 +200,6 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // Control de edición por campo
     var editNombre by rememberSaveable { mutableStateOf(false) }
     var editFecha by rememberSaveable { mutableStateOf(false) }
     var editTelefono by rememberSaveable { mutableStateOf(false) }
@@ -168,7 +217,6 @@ fun PerfilScreen(navController: NavController) {
         editCorreo = false
     }
 
-    // Cerrar edición tras guardar OK
     LaunchedEffect(perfil.mensaje, perfil.modoEdicion) {
         if (!perfil.modoEdicion && perfil.mensaje == "Perfil actualizado correctamente.") {
             user = SessionManager.user
@@ -176,7 +224,6 @@ fun PerfilScreen(navController: NavController) {
         }
     }
 
-    // Feedback envío soporte
     LaunchedEffect(envio.ok, envio.error) {
         when {
             envio.ok -> {
@@ -217,45 +264,40 @@ fun PerfilScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // Header (nombre + rol) con lápiz solo para nombre
             ElevatedCard(
                 colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
                 elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val displayNombre = buildString {
+                    val nombreActual = perfil.nombre.ifBlank { u.name }
+                    val apellidoActual = perfil.apellido.ifBlank { SessionManager.lastName.orEmpty() }
+                    if (nombreActual.isNotBlank()) append(nombreActual)
+                    if (apellidoActual.isNotBlank()) {
+                        if (isNotEmpty()) append(' ')
+                        append(apellidoActual)
+                    }
+                }.ifBlank { u.name }
+
                 Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(Icons.Filled.Person, contentDescription = null, tint = cs.primary)
                     Spacer(Modifier.width(8.dp))
-
-                    if (!editNombre) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            if (perfil.nombre.isNotBlank()) perfil.nombre else u.name,
+                            text = displayNombre,
                             style = MaterialTheme.typography.titleMedium,
-                            color = cs.onSurface,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f)
+                            color = cs.onSurface
                         )
-                        IconButton(onClick = { editNombre = true; enterEdit() }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Editar nombre")
-                        }
-                    } else {
-                        OutlinedTextField(
-                            value = perfil.nombre,
-                            onValueChange = vm::onPerfilNombreChange,
-                            label = { Text("Nombre") },
-                            isError = perfil.errorNombre != null,
-                            supportingText = { perfil.errorNombre?.let { Text(it) } },
-                            modifier = Modifier.weight(1f)
+                        Spacer(Modifier.height(6.dp))
+                        RoleBox(
+                            roleName = when (roleId) { 2L -> "ADMINISTRADOR"; 3L -> "SOPORTE"; else -> "CLIENTE" }
                         )
                     }
-
-                    Spacer(Modifier.width(8.dp))
-                    RoleBox(
-                        roleName = when (roleId) { 2L -> "ADMINISTRADOR"; 3L -> "SOPORTE"; else -> "CLIENTE" }
-                    )
                 }
             }
 
@@ -266,7 +308,9 @@ fun PerfilScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text("Foto Perfil", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
@@ -276,7 +320,9 @@ fun PerfilScreen(navController: NavController) {
 
                     if (photoUriString.isNullOrEmpty()) {
                         Box(
-                            modifier = Modifier.size(120.dp).clip(CircleShape)
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
                                 .background(cs.surfaceVariant.copy(alpha = 0.45f)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -298,7 +344,7 @@ fun PerfilScreen(navController: NavController) {
                                     takePictureLauncher.launch(uri)
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Icon(Icons.Filled.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Cámara") }
+                            ) { Icon(Icons.Filled.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Camara") }
                             OutlinedButton(
                                 onClick = {
                                     pickMediaLauncher.launch(
@@ -306,13 +352,15 @@ fun PerfilScreen(navController: NavController) {
                                     )
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Icon(Icons.Filled.Image, null); Spacer(Modifier.width(8.dp)); Text("Galería") }
+                            ) { Icon(Icons.Filled.Image, null); Spacer(Modifier.width(8.dp)); Text("Galeria") }
                         }
                     } else {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(Uri.parse(photoUriString)).crossfade(true).build(),
                             contentDescription = "Foto de perfil",
-                            modifier = Modifier.size(140.dp).clip(CircleShape),
+                            modifier = Modifier
+                                .size(140.dp)
+                                .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(Modifier.height(14.dp))
@@ -329,7 +377,7 @@ fun PerfilScreen(navController: NavController) {
                                     takePictureLauncher.launch(uri)
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Icon(Icons.Filled.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Cámara") }
+                            ) { Icon(Icons.Filled.CameraAlt, null); Spacer(Modifier.width(8.dp)); Text("Camara") }
                             OutlinedButton(
                                 onClick = {
                                     pickMediaLauncher.launch(
@@ -337,7 +385,7 @@ fun PerfilScreen(navController: NavController) {
                                     )
                                 },
                                 modifier = Modifier.weight(1f)
-                            ) { Icon(Icons.Filled.Image, null); Spacer(Modifier.width(8.dp)); Text("Galería") }
+                            ) { Icon(Icons.Filled.Image, null); Spacer(Modifier.width(8.dp)); Text("Galeria") }
                         }
                         Spacer(Modifier.height(12.dp))
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -349,7 +397,7 @@ fun PerfilScreen(navController: NavController) {
                             AlertDialog(
                                 onDismissRequest = { showDialog = false },
                                 title = { Text("Eliminar foto") },
-                                text = { Text("¿Deseas eliminar la foto de perfil?") },
+                                text = { Text("Deseas eliminar la foto de perfil?") },
                                 confirmButton = {
                                     TextButton(onClick = {
                                         val email = u.email
@@ -370,12 +418,11 @@ fun PerfilScreen(navController: NavController) {
                 }
             }
 
-            // ---------- FORMULARIO EN UNA SOLA SECCIÓN ----------
+            // ---------- FORMULARIO ----------
 
-            // Correo electrónico (editable con lápiz)
             if (!editCorreo) {
                 CampoReadOnlyDegradado(
-                    etiqueta = "Correo electrónico",
+                    etiqueta = "Correo electronico",
                     valor = perfil.correo.ifBlank { u.email },
                     leadingIcon = { Icon(Icons.Filled.AlternateEmail, null) },
                     trailingIcon = {
@@ -389,14 +436,26 @@ fun PerfilScreen(navController: NavController) {
                 OutlinedTextField(
                     value = perfil.correo,
                     onValueChange = vm::onPerfilEmailChange,
-                    label = { Text("Correo electrónico") },
+                    label = { Text("Correo electronico") },
                     isError = perfil.errorCorreo != null,
                     supportingText = { perfil.errorCorreo?.let { Text(it) } },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // RUT (solo lectura)
+            // Contraseña (solo muestra oculto y abre la pantalla de cambio)
+            CampoReadOnlyDegradado(
+                etiqueta = "Contraseña",
+                valor = "********",
+                leadingIcon = { Icon(Icons.Filled.Lock, null) },
+                trailingIcon = {
+                    IconButton(onClick = { navController.navigate(Route.EditarContrasena.path) }) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Editar contraseña")
+                    }
+                },
+                borderBrush = grad2
+            )
+
             CampoReadOnlyDegradado(
                 etiqueta = "RUT",
                 valor = u.rut,
@@ -404,7 +463,48 @@ fun PerfilScreen(navController: NavController) {
                 borderBrush = grad2
             )
 
-            // Fecha de nacimiento
+            if (!editNombre) {
+                CampoReadOnlyDegradado(
+                    etiqueta = "Nombre",
+                    valor = perfil.nombre.ifBlank { u.name },
+                    leadingIcon = { Icon(Icons.Filled.Person, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { editNombre = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar nombre y apellidos")
+                        }
+                    },
+                    borderBrush = grad1
+                )
+                CampoReadOnlyDegradado(
+                    etiqueta = "Apellidos",
+                    valor = perfil.apellido.ifBlank { SessionManager.lastName.orEmpty() }.ifBlank { "Sin apellidos" },
+                    leadingIcon = { Icon(Icons.Filled.Person, null) },
+                    trailingIcon = {
+                        IconButton(onClick = { editNombre = true; enterEdit() }) {
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar nombre y apellidos")
+                        }
+                    },
+                    borderBrush = grad2
+                )
+            } else {
+                OutlinedTextField(
+                    value = perfil.nombre,
+                    onValueChange = vm::onPerfilNombreChange,
+                    label = { Text("Nombre") },
+                    isError = perfil.errorNombre != null,
+                    supportingText = { perfil.errorNombre?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = perfil.apellido,
+                    onValueChange = vm::onPerfilApellidoChange,
+                    label = { Text("Apellidos (opcional)") },
+                    isError = perfil.errorApellido != null,
+                    supportingText = { perfil.errorApellido?.let { Text(it) } },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             if (!editFecha) {
                 CampoReadOnlyDegradado(
                     etiqueta = "Fecha de nacimiento",
@@ -429,15 +529,14 @@ fun PerfilScreen(navController: NavController) {
                 )
             }
 
-            // Teléfono
             if (!editTelefono) {
                 CampoReadOnlyDegradado(
-                    etiqueta = "Teléfono",
+                    etiqueta = "Telefono",
                     valor = perfil.telefono.ifBlank { u.phone ?: "No registrado" },
                     leadingIcon = { Icon(Icons.Filled.Phone, null) },
                     trailingIcon = {
                         IconButton(onClick = { editTelefono = true; enterEdit() }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Editar teléfono")
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar telefono")
                         }
                     },
                     borderBrush = grad2
@@ -446,7 +545,7 @@ fun PerfilScreen(navController: NavController) {
                 OutlinedTextField(
                     value = perfil.telefono,
                     onValueChange = vm::onPerfilTelefonoChange,
-                    label = { Text("Teléfono") },
+                    label = { Text("Telefono") },
                     leadingIcon = { Icon(Icons.Filled.Phone, null) },
                     isError = perfil.errorTelefono != null,
                     supportingText = { perfil.errorTelefono?.let { Text(it) } },
@@ -454,15 +553,14 @@ fun PerfilScreen(navController: NavController) {
                 )
             }
 
-            // Dirección
             if (!editDireccion) {
                 CampoReadOnlyDegradado(
-                    etiqueta = "Dirección",
+                    etiqueta = "Direccion",
                     valor = perfil.direccion.ifBlank { u.address },
                     leadingIcon = { Icon(Icons.Filled.Home, null) },
                     trailingIcon = {
                         IconButton(onClick = { editDireccion = true; enterEdit() }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Editar dirección")
+                            Icon(Icons.Filled.Edit, contentDescription = "Editar direccion")
                         }
                     },
                     borderBrush = grad1
@@ -471,32 +569,25 @@ fun PerfilScreen(navController: NavController) {
                 OutlinedTextField(
                     value = perfil.direccion,
                     onValueChange = vm::onPerfilDireccionChange,
-                    label = { Text("Dirección") },
+                    label = { Text("Direccion") },
                     leadingIcon = { Icon(Icons.Filled.Home, null) },
+                    isError = perfil.errorDireccion != null,
+                    supportingText = { perfil.errorDireccion?.let { Text(it) } },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            // Botonera guardar/cancelar (solo cuando hay edición)
             if (anyEditing) {
-                if (perfil.cargando) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                if (perfil.cargando) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(
                         onClick = { vm.submitPerfilGuardar() },
                         enabled = perfil.puedeGuardar && !perfil.cargando,
                         modifier = Modifier.weight(1f)
                     ) { Text("Guardar cambios") }
-
                     OutlinedButton(
                         onClick = {
-                            vm.cargarPerfil()
-                            clearEdits()
-                            exitEdit()
+                            vm.cargarPerfil(); clearEdits(); exitEdit()
                         },
                         enabled = !perfil.cargando,
                         modifier = Modifier.weight(1f)
@@ -507,7 +598,6 @@ fun PerfilScreen(navController: NavController) {
 
             Spacer(Modifier.height(16.dp))
 
-            // Historial de compras
             Button(
                 onClick = { navController.navigate(Route.HistorialCompras.path) },
                 colors = ButtonDefaults.buttonColors(
@@ -515,12 +605,13 @@ fun PerfilScreen(navController: NavController) {
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 ),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(48.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) { Text("Historial de compras", style = MaterialTheme.typography.labelLarge) }
 
             Spacer(Modifier.height(12.dp))
 
-            // Cerrar sesión
             Button(
                 onClick = {
                     SessionManager.user = null
@@ -535,10 +626,11 @@ fun PerfilScreen(navController: NavController) {
                     contentColor = cs.onPrimary
                 ),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            ) { Text("Cerrar sesión", style = MaterialTheme.typography.labelLarge) }
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) { Text("Cerrar sesion", style = MaterialTheme.typography.labelLarge) }
 
-            // Contactar Soporte (solo CLIENTE)
             if (roleId == 1L) {
                 ElevatedCard(
                     colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
@@ -567,97 +659,72 @@ fun PerfilScreen(navController: NavController) {
                                 )
                             },
                             enabled = mensajeTexto.isNotBlank() && !envio.enviando,
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
                         ) { Text(if (envio.enviando) "Enviando..." else "Enviar a Soporte") }
                     }
                 }
 
-                    Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-                    // MENSAJES DE SOPORTE (Cliente)
+                var asc by rememberSaveable { mutableStateOf(false) }
+                fun fmt(ts: Long): String = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(ts))
+                val userIdStable = remember(u.rut) { rutToStableLong(u.rut) }
+                val outbox by mensajesVm.observarOutboxClienteConRespuesta(userIdStable, asc)
+                    .collectAsStateWithLifecycle(initialValue = emptyList())
 
-                    // Orden: false = más reciente → más antiguo (default), true = más antiguo → más reciente
-                    var asc by rememberSaveable { mutableStateOf(false) }
-
-                    fun fmt(ts: Long): String =
-                        java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
-                            .format(java.util.Date(ts))
-
-                    val userIdStable = remember(u.rut) { rutToStableLong(u.rut) }
-                    val outbox by mensajesVm
-                        .observarOutboxClienteConRespuesta(userIdStable, asc)
-                        .collectAsStateWithLifecycle(initialValue = emptyList())
-
-                    ElevatedCard(
-                        colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
-                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Mensajes de soporte", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
-                                TextButton(onClick = { asc = !asc }) {
-                                    Text(if (asc) "Orden: antiguo → reciente" else "Orden: reciente → antiguo")
-                                }
+                ElevatedCard(
+                    colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Mensajes de soporte", style = MaterialTheme.typography.titleMedium, color = cs.onSurface)
+                            TextButton(onClick = { asc = !asc }) {
+                                Text(if (asc) "Orden: antiguo -> reciente" else "Orden: reciente -> antiguo")
                             }
-
-                            Spacer(Modifier.height(8.dp))
-
-                            if (outbox.isEmpty()) {
-                                Text(
-                                    "Aún no has enviado mensajes.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = cs.onSurfaceVariant
-                                )
-                            } else {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    outbox.forEach { item ->
-                                        val m = item.clienteMensaje
-                                        val r = item.respuesta
-                                        ElevatedCard(
-                                            colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
-                                            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Column(Modifier.padding(12.dp)) {
-                                                // Cabecera: fecha + estado leído
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(fmt(m.createdAt), style = MaterialTheme.typography.labelLarge)
-                                                    val estado = if (m.read) "Leído" else "No leído"
-                                                    AssistChip(
-                                                        onClick = {},
-                                                        label = { Text(estado) }
-                                                    )
-                                                }
-
-                                                Spacer(Modifier.height(6.dp))
-                                                Text(m.content, style = MaterialTheme.typography.bodyLarge)
-
-                                                Spacer(Modifier.height(10.dp))
-                                                Divider()
-
-                                                Spacer(Modifier.height(10.dp))
-                                                Text("Respuesta del soporte", style = MaterialTheme.typography.labelLarge)
-
-                                                if (r != null) {
-                                                    Spacer(Modifier.height(4.dp))
-                                                    Text(r.content, style = MaterialTheme.typography.bodyMedium)
-                                                } else {
-                                                    Spacer(Modifier.height(4.dp))
-                                                    Text(
-                                                        "No se ha respondido el mensaje",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = cs.onSurfaceVariant
-                                                    )
-                                                }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        if (outbox.isEmpty()) {
+                            Text("Aun no has enviado mensajes.", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                outbox.forEach { item ->
+                                    val m = item.clienteMensaje
+                                    val r = item.respuesta
+                                    ElevatedCard(
+                                        colors = CardDefaults.elevatedCardColors(containerColor = cs.surface),
+                                        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(Modifier.padding(12.dp)) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(fmt(m.createdAt), style = MaterialTheme.typography.labelLarge)
+                                                val estado = if (m.read) "Leido" else "No leido"
+                                                AssistChip(onClick = {}, label = { Text(estado) })
+                                            }
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(m.content, style = MaterialTheme.typography.bodyLarge)
+                                            Spacer(Modifier.height(10.dp))
+                                            Divider()
+                                            Spacer(Modifier.height(10.dp))
+                                            Text("Respuesta del soporte", style = MaterialTheme.typography.labelLarge)
+                                            if (r != null) {
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(r.content, style = MaterialTheme.typography.bodyMedium)
+                                            } else {
+                                                Spacer(Modifier.height(4.dp))
+                                                Text("No se ha respondido el mensaje", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                                             }
                                         }
                                     }
@@ -665,9 +732,8 @@ fun PerfilScreen(navController: NavController) {
                             }
                         }
                     }
-
-                    Spacer(Modifier.height(16.dp))
-
+                }
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
@@ -679,13 +745,20 @@ private fun RoleBox(roleName: String) {
     OutlinedCard(
         colors = CardDefaults.outlinedCardColors(containerColor = cs.surface),
         border = CardDefaults.outlinedCardBorder(),
-        modifier = Modifier.clip(MaterialTheme.shapes.medium).wrapContentWidth()
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.medium)
+            .wrapContentWidth()
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(color = cs.primary, contentColor = cs.onPrimary, shape = MaterialTheme.shapes.small, modifier = Modifier.size(10.dp)) {}
+            Surface(
+                color = cs.primary,
+                contentColor = cs.onPrimary,
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier.size(10.dp)
+            ) {}
             Spacer(Modifier.width(8.dp))
             Text(roleName.uppercase(), style = MaterialTheme.typography.labelLarge, color = cs.onSurface, fontWeight = FontWeight.SemiBold)
         }

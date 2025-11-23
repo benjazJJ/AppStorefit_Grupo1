@@ -18,12 +18,14 @@ object SessionStore {
     private val KEY_PHONE   = stringPreferencesKey("phone")
     private val KEY_BIRTH   = stringPreferencesKey("birthDate")
     private val KEY_ROLEID  = longPreferencesKey("roleId")
+    private val KEY_LASTNAME = stringPreferencesKey("lastName")
 
     suspend fun save(
         context: Context,
         email: String,
         rut: String,
         name: String,
+        lastName: String?,
         address: String,
         phone: String?,
         birthDate: String?,
@@ -33,6 +35,7 @@ object SessionStore {
             p[KEY_EMAIL] = email
             p[KEY_RUT] = rut
             p[KEY_NAME] = name
+            if (!lastName.isNullOrBlank()) p[KEY_LASTNAME] = lastName
             p[KEY_ADDRESS] = address
             if (!phone.isNullOrBlank()) p[KEY_PHONE] = phone
             if (!birthDate.isNullOrBlank()) p[KEY_BIRTH] = birthDate
@@ -49,17 +52,19 @@ object SessionStore {
         val email = prefs[KEY_EMAIL] ?: return null
         val rut = prefs[KEY_RUT] ?: ""
         val name = prefs[KEY_NAME] ?: ""
+        val lastName = prefs[KEY_LASTNAME]
         val address = prefs[KEY_ADDRESS] ?: ""
         val phone = prefs[KEY_PHONE]
         val birth = prefs[KEY_BIRTH]
         val roleId = prefs[KEY_ROLEID] ?: 0L
-        return LoadedSession(email, rut, name, address, phone, birth, roleId)
+        return LoadedSession(email, rut, name, lastName, address, phone, birth, roleId)
     }
 
     data class LoadedSession(
         val email: String,
         val rut: String,
         val name: String,
+        val lastName: String?,
         val address: String,
         val phone: String?,
         val birthDate: String?,

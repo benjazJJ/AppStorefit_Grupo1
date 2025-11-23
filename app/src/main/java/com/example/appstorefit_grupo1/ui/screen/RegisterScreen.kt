@@ -54,6 +54,7 @@ fun RegisterScreenVm(
         widthClass = widthClass,
         rut = state.rut,
         name = state.name,
+        lastName = state.lastName,
         email = state.email,
         phone = state.phone,
         address = state.address,
@@ -62,6 +63,7 @@ fun RegisterScreenVm(
         confirm = state.confirm,
         rutError = state.rutError,
         nameError = state.nameError,
+        lastNameError = state.lastNameError,
         emailError = state.emailError,
         phoneError = state.phoneError,
         addressError = state.addressError,
@@ -73,6 +75,7 @@ fun RegisterScreenVm(
         errorMsg = state.errorMsg,
         onRutChange = vm::onRutChange,
         onNameChange = vm::onNameChange,
+        onLastNameChange = vm::onLastNameChange,
         onEmailChange = vm::onRegisterEmailChange,
         onPhoneChange = vm::onPhoneChange,
         onAddressChange = vm::onAddressChange,
@@ -91,6 +94,7 @@ private fun RegisterScreen(
     widthClass: WindowWidthSizeClass,
     rut: String,
     name: String,
+    lastName: String,
     email: String,
     phone: String,
     address: String,
@@ -99,6 +103,7 @@ private fun RegisterScreen(
     confirm: String,
     rutError: String?,
     nameError: String?,
+    lastNameError: String?,
     emailError: String?,
     phoneError: String?,
     addressError: String?,
@@ -110,6 +115,7 @@ private fun RegisterScreen(
     errorMsg: String?,
     onRutChange: (String) -> Unit,
     onNameChange: (String) -> Unit,
+    onLastNameChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onAddressChange: (String) -> Unit,
@@ -179,6 +185,17 @@ private fun RegisterScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 AnimatedError(nameError)
+
+                // Apellidos
+                OutlinedTextField(
+                    value = lastName,
+                    onValueChange = onLastNameChange,
+                    label = { Text("Apellidos") },
+                    singleLine = true,
+                    isError = lastNameError != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                AnimatedError(lastNameError)
 
                 // Email
                 val isEmailTaken = errorMsg == "Correo ya registrado"

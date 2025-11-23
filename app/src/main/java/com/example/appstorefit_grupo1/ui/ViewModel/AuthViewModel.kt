@@ -40,6 +40,7 @@ data class LoginUiState(
 data class RegisterUiState(
     val rut: String = "",
     val name: String = "",
+    val lastName: String = "",
     val email: String = "",
     val phone: String = "",
     val address: String = "",
@@ -49,6 +50,7 @@ data class RegisterUiState(
 
     val rutError: String? = null,
     val nameError: String? = null,
+    val lastNameError: String? = null,
     val emailError: String? = null,
     val phoneError: String? = null,
     val addressError: String? = null,
@@ -67,14 +69,17 @@ data class PerfilUiState(
     val modoEdicion: Boolean = false,
 
     val nombre: String = "",
+    val apellido: String = "",
     val correo: String = "",
     val telefono: String = "",
     val direccion: String = "",
     val fechaNacimiento: String = "",
 
     val errorNombre: String? = null,
+    val errorApellido: String? = null,
     val errorCorreo : String? = null,
     val errorTelefono: String? = null,
+    val errorDireccion: String? = null,
     val errorFechaNacimiento: String? = null,
 
     val puedeGuardar: Boolean = false,
@@ -171,6 +176,12 @@ class AuthViewModel(
         recomputeRegisterCanSubmit()
     }
 
+    fun onLastNameChange(value: String) {
+        val filtered = value.filter { it.isLetter() || it.isWhitespace() }
+        _register.update { it.copy(lastName = filtered, lastNameError = validateNombre(filtered)) }
+        recomputeRegisterCanSubmit()
+    }
+
     fun onRegisterEmailChange(value: String) {
         _register.update { it.copy(email = value, emailError = validateEmail(value)) }
 
@@ -237,12 +248,12 @@ class AuthViewModel(
     private fun recomputeRegisterCanSubmit() {
         val s = _register.value
         val noErrors = listOf(
-            s.rutError, s.nameError, s.emailError, s.phoneError,
+            s.rutError, s.nameError, s.lastNameError, s.emailError, s.phoneError,
             s.addressError, s.passError, s.confirmError, s.birthDateError
         ).all { it == null }
 
         val filled = s.rut.isNotBlank() && s.name.isNotBlank() && s.email.isNotBlank() &&
-                s.phone.isNotBlank() && s.address.isNotBlank() &&
+                s.lastName.isNotBlank() && s.phone.isNotBlank() && s.address.isNotBlank() &&
                 s.pass.isNotBlank() && s.confirm.isNotBlank() &&
                 s.birthDate.isNotBlank()
 
@@ -259,6 +270,7 @@ class AuthViewModel(
             val result = repository.register(
                 rut = s.rut,
                 name = s.name,
+                lastName = s.lastName,
                 email = s.email,
                 address = s.address,
                 phone = s.phone,
@@ -288,13 +300,16 @@ class AuthViewModel(
                 cargando = false,
                 modoEdicion = false,
                 nombre = u.name,
+                apellido = SessionManager.lastName.orEmpty(),
                 correo = u.email,
                 telefono = u.phone.orEmpty(),
                 direccion = u.address,
                 fechaNacimiento = u.birthDate,
                 errorNombre = null,
+                errorApellido = null,
                 errorCorreo = null,
                 errorTelefono = null,
+                errorDireccion = null,
                 errorFechaNacimiento = null,
                 puedeGuardar = false,
                 mensaje = null
@@ -309,6 +324,13 @@ class AuthViewModel(
     fun onPerfilNombreChange(value: String) {
         val err = if (value.isBlank()) "El nombre es obligatorio." else null
         _perfil.update { it.copy(nombre = value, errorNombre = err) }
+        recomputePerfilPuedeGuardar()
+    }
+
+    fun onPerfilApellidoChange(value: String) {
+        // Apellidos opcionales: solo validamos que no tenga números
+        val err = if (value.isNotBlank() && value.any { it.isDigit() }) "El apellido no debe contener números." else null
+        _perfil.update { it.copy(apellido = value, errorApellido = err) }
         recomputePerfilPuedeGuardar()
     }
 
@@ -363,7 +385,9 @@ class AuthViewModel(
     }
 
     fun onPerfilDireccionChange(value: String) {
-        _perfil.update { it.copy(direccion = value) }
+        val trimmed = value
+        val err = if (trimmed.length < 10) "La direccion debe tener al menos 10 caracteres." else null
+        _perfil.update { it.copy(direccion = trimmed, errorDireccion = err) }
         recomputePerfilPuedeGuardar()
     }
 
@@ -377,11 +401,12 @@ class AuthViewModel(
     private fun recomputePerfilPuedeGuardar() {
         val s = _perfil.value
         val okNombre = s.errorNombre == null && s.nombre.isNotBlank()
+        val okApellido = s.errorApellido == null
         val okCorreo = s.errorCorreo == null && s.correo.isNotBlank()
         val okTel = s.errorTelefono == null
         val okFecha = s.errorFechaNacimiento == null && s.fechaNacimiento.isNotBlank()
-        val okDir = s.direccion.isNotBlank()
-        _perfil.update { it.copy(puedeGuardar = okNombre && okTel && okFecha && okDir) }
+        val okDir = s.errorDireccion == null && s.direccion.length >= 10
+        _perfil.update { it.copy(puedeGuardar = okNombre && okApellido && okTel && okFecha && okDir) }
     }
 
     fun submitPerfilGuardar() {
@@ -416,6 +441,7 @@ class AuthViewModel(
             val r = repository.actualizarPerfil(
                 rut = rut,
                 nombre = s.nombre,
+                apellido = s.apellido,
                 telefono = s.telefono.ifBlank { null },
                 direccion = s.direccion,
                 fechaNacimiento = s.fechaNacimiento,

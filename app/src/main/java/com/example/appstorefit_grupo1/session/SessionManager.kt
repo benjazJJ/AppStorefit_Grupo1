@@ -8,11 +8,13 @@ import com.example.appstorefit_grupo1.data.local.user.UserEntity
 object SessionManager {
     @Volatile var user: UserEntity? = null
     @Volatile var roleId: Long? = null
+    @Volatile var lastName: String? = null
 
     //Limpia solo memoria
     fun clear() {
         user = null
         roleId = null
+        lastName = null
     }
 
     //Restaura sesión desde DataStore (llamar al iniciar la app)
@@ -28,6 +30,7 @@ object SessionManager {
             photoUri = null
         )
         roleId = s.roleId
+        lastName = s.lastName
     }
 
     // Persiste la sesión actual en DataStore (llamar tras login OK)
@@ -38,6 +41,7 @@ object SessionManager {
             email = u.email,
             rut = u.rut,
             name = u.name,
+            lastName = lastName,
             address = u.address,
             phone = u.phone,
             birthDate = u.birthDate.ifBlank { null },
@@ -51,3 +55,5 @@ object SessionManager {
         SessionStore.clear(context)
     }
 }
+
+

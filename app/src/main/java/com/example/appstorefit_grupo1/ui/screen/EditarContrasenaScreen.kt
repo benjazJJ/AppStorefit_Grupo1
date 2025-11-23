@@ -19,7 +19,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import com.example.appstorefit_grupo1.data.local.database.AppDatabase
+import com.example.appstorefit_grupo1.data.remote.RemoteModule
+import com.example.appstorefit_grupo1.data.remote.ServiceUrls
+import com.example.appstorefit_grupo1.data.remote.users.UsersApi
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 import com.example.appstorefit_grupo1.session.SessionManager
 import com.example.appstorefit_grupo1.ui.theme.SF_Blue
@@ -48,14 +50,13 @@ fun EditarContrasenaScreen(
     val buttonShape = RoundedCornerShape(24.dp)
 
     val ctx = LocalContext.current
-    val db   = remember { AppDatabase.getInstance(context = ctx) }
-    val repo = remember {
-        UserRepository(
-            db          = db,
-            userDao     = db.userDao(),
-            registroDao = db.registroDao(),
-            rolDao      = db.rolDao())
+    val usersApi = remember {
+        RemoteModule.create(
+            baseUrl = ServiceUrls.USERS_BASE_URL,
+            service = UsersApi::class.java
+        )
     }
+    val repo = remember { UserRepository(api = usersApi) }
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
 

@@ -3,21 +3,20 @@ package com.example.appstorefit_grupo1.ui.ViewModel
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.appstorefit_grupo1.data.local.database.AppDatabase
+import com.example.appstorefit_grupo1.data.remote.RemoteModule
+import com.example.appstorefit_grupo1.data.remote.ServiceUrls
+import com.example.appstorefit_grupo1.data.remote.users.UsersApi
 import com.example.appstorefit_grupo1.data.repository.UserRepository
 
-// Factory que arma el UserRepository desde Room usando el Context de la app
+// Factory que arma el UserRepository remoto (UsersApi) usando el Context de la app
 class AuthViewModelFactory(private val appContext: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val context = appContext.applicationContext
-        val db = AppDatabase.getInstance(context)
-        val repo = UserRepository(
-            db = db,
-            userDao = db.userDao(),
-            registroDao = db.registroDao(),
-            rolDao = db.rolDao()
+        val api = RemoteModule.create(
+            baseUrl = ServiceUrls.USERS_BASE_URL,
+            service = UsersApi::class.java
         )
-        return AuthViewModel(repo, context) as T
+        val repo = UserRepository(api = api)
+        return AuthViewModel(repo, appContext.applicationContext) as T
     }
 }
