@@ -18,6 +18,17 @@ interface ProductosDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(productos: List<ProductosEntity>): List<Long>
 
+    @androidx.room.Transaction
+    suspend fun upsert(product: ProductosEntity) {
+        val updated = update(product)
+        if (updated == 0) insert(product)
+    }
+
+    @androidx.room.Transaction
+    suspend fun upsertAll(productos: List<ProductosEntity>) {
+        productos.forEach { upsert(it) }
+    }
+
     @Update
     suspend fun update(product: ProductosEntity): Int
 
@@ -190,4 +201,3 @@ interface ProductosDao {
         delta: Int
     ): Int
 }
-

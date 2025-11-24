@@ -1,11 +1,22 @@
 package com.example.appstorefit_grupo1.data.remote.dto.catalog
 
+import com.google.gson.annotations.SerializedName
+
 data class ProductoDto(
-    val id: ProductoIdDto,      // coincide con tu `ProductoId` embebido en Java
+    @SerializedName("id")
+    val id: ProductoIdDto,
+    @SerializedName("marca")
     val marca: String,
+    @SerializedName("modelo")
     val modelo: String,
+    @SerializedName("color")
     val color: String,
+    @SerializedName("talla")
     val talla: String,
-    val precio: Double,
-    val cantidadPolera: Int
+    @SerializedName("precio")
+    val precio: Int,
+    @SerializedName("stock")
+    val stock: Int,
+    @SerializedName("imageUrl")
+    val imageUrl: String? = null
 )

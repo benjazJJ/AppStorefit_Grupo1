@@ -108,18 +108,16 @@ fun DetalleProductoScreen(
     LaunchedEffect(idCategoria, modelo) {
         val all = repo.getByCategoria(idCategoria).getOrDefault(emptyList())
         variantes = all
-            .filter { it.modelo == modelo || it.modelo == "B$modelo" }
+            .filter { it.modelo == modelo }
             .sortedWith(compareBy<ProductosEntity>({ idxTalla(it.talla) }, { it.color }))
     }
 
     LaunchedEffect(selectedColor, selectedTalla, idCategoria, modelo) {
         val color = selectedColor ?: return@LaunchedEffect
         val talla = selectedTalla ?: return@LaunchedEffect
-        val modeloEfectivo = if (color == "Blanco con detalles negros") "B$modelo" else modelo
-
         varianteSelect = db.productosDao().getByCatModeloColorTalla(
             idCategoria = idCategoria,
-            modelo = modeloEfectivo,
+            modelo = modelo,
             color = color,
             talla = talla
         )
