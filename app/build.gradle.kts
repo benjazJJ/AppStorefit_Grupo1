@@ -120,4 +120,5 @@ dependencies {
     //reglas adicionales
     androidTestImplementation("androidx.test:core-ktx:1.5.0")
     androidTestImplementation("androidx.test:rules:1.5.0")
+    testImplementation(kotlin("test"))
 }
