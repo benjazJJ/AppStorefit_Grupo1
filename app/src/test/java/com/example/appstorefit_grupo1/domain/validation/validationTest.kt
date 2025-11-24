@@ -16,4 +16,9 @@ class ValidationTest{
         //Evaluar los criterios de aceptación
         assertNull(error)
     }
+
+    @Test
+    fun validateEmail_vacio_da_error(){
+        val error = validateEmail("")
+    }
 }
