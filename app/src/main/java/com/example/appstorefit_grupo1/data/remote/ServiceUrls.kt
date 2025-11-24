@@ -7,3 +7,4 @@ object ServiceUrls {
     const val SUPPORT_BASE_URL = "https://f0w9w4nq-8083.brs.devtunnels.ms/" //Url de support-service
     const val USERS_BASE_URL   = "https://f0w9w4nq-8084.brs.devtunnels.ms/" //Url de users-service
 }
+
