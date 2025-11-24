@@ -1,89 +1,114 @@
 package com.example.appstorefit_grupo1.data.repository
-
-import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeDao
-import com.example.appstorefit_grupo1.data.local.Mensaje.MensajeEntity
-import kotlinx.coroutines.flow.Flow
+import com.example.appstorefit_grupo1.data.remote.dto.support.EnviarMensajeRequest
+import com.example.appstorefit_grupo1.data.remote.dto.support.MensajeConRespuestaDto
+import com.example.appstorefit_grupo1.data.remote.dto.support.ResponderMensajeRequest
+import com.example.appstorefit_grupo1.data.remote.dto.support.SupportDto
+import com.example.appstorefit_grupo1.data.remote.support.SupportApi
+import com.example.appstorefit_grupo1.session.SessionManager
 
 class MensajeRepository(
-    private val dao: MensajeDao
+    private val api: SupportApi,
+    private val session: SessionManager
 ) {
     companion object {
         const val ROL_SOPORTE = 3
     }
 
-    /** Cliente ⇒ Soporte (mensaje original, no respuesta). */
-    suspend fun enviarMensaje(
-        idUsuarioRemitente: Long,
-        idRolDestinoSoporte: Int = ROL_SOPORTE,
-        contenido: String
-    ): Long {
-        require(contenido.isNotBlank()) { "El contenido no puede estar vacío" }
-        val entidad = MensajeEntity(
-            senderUserId = idUsuarioRemitente,
-            targetRoleId = idRolDestinoSoporte,
-            targetUserId = null,
-            content = contenido.trim(),
-            isResponse = false,
-            repliedToId = null,
-            threadId = null,
-            respondedAt = null
-        )
-        return dao.insert(entidad)
+    //Obtiene rut y rol actuales desde la sesión para armar los headers.
+    private fun headers(): Pair<String, String> {
+        val user = session.user ?: throw IllegalStateException("Inicia sesion para enviar mensajes.")
+        val roleId = session.roleId ?: throw IllegalStateException("Rol no disponible en la sesion.")
+        val rut = user.rut.trim()
+        require(rut.isNotBlank()) { "RUT no disponible en la sesion." }
+
+        // El servicio de soporte exige el nombre del rol (CLIENTE/ADMIN/SOPORTE), no el id numAcrico.
+        val rolHeader = when (roleId) {
+            1L -> "CLIENTE"
+            2L -> "ADMIN"
+            3L -> "SOPORTE"
+            else -> roleId.toString()
+        }
+        return rut to rolHeader
     }
 
-    /** Bandeja de soporte: solo mensajes originales de clientes. */
-    fun observarBandejaSoporte(idRolSoporte: Int = ROL_SOPORTE): Flow<List<MensajeEntity>> =
-        dao.getForSupport(idRolSoporte)
+    //Cliente ⇒ Soporte (mensaje original, no respuesta).
+    suspend fun enviarMensajeCliente(contenido: String): SupportDto {
+        require(contenido.isNotBlank()) { "El contenido no puede estar vacío" }
 
-    /** Historial que envió un cliente (sin respuestas). */
-    fun observarMensajesDe(idUsuario: Long): Flow<List<MensajeEntity>> =
-        dao.getBySender(idUsuario)
+        val (rut, rol) = headers()
 
-    /** Outbox del cliente + posible respuesta del soporte (orden configurable). */
-    fun observarOutboxClienteConRespuesta(
-        idUsuario: Long,
-        asc: Boolean
-    ): Flow<List<MensajeConRespuesta>> =
-        dao.getOutboxConRespuesta(idUsuario, asc)
-
-    /** Marcar como leído (lo usa quien recibe). */
-    suspend fun marcarComoLeido(idMensaje: Long): Int =
-        dao.markAsRead(idMensaje)
-
-    /** Soporte ⇒ Cliente (responder una única vez al mensaje original). */
-    suspend fun responderSoporteAlCliente(
-        threadId: Long,             // id del mensaje original del cliente
-        idUsuarioSoporte: Long,     // quien responde (soporte)
-        idUsuarioCliente: Long,     // destinatario (cliente)
-        contenido: String
-    ): Long {
-        require(contenido.isNotBlank()) { "La respuesta no puede estar vacía" }
-
-        val original = dao.getById(threadId)
-            ?: throw IllegalArgumentException("Mensaje original no encontrado")
-        require(!original.isResponse) { "No se puede responder a una respuesta" }
-        require(original.targetRoleId == ROL_SOPORTE) { "El mensaje no está dirigido a soporte" }
-        require(idUsuarioCliente == original.senderUserId) { "El destinatario no coincide con el remitente original" }
-
-        // Evitar múltiples respuestas sobre el mismo original
-        val yaRespondida = dao.getRespuestaDe(original.id)
-        require(yaRespondida == null) { "Este mensaje ya fue respondido" }
-
-        val ahora = System.currentTimeMillis()
-
-        val respuesta = MensajeEntity(
-            senderUserId = idUsuarioSoporte,
-            targetRoleId = null,                 // respuesta va a un usuario específico
-            targetUserId = idUsuarioCliente,     // el cliente que recibirá
-            content = contenido.trim(),
-            createdAt = ahora,
-            read = false,                        // el cliente aún no la lee
-            isResponse = true,
-            repliedToId = original.id,           // vínculo al original
-            threadId = original.id,              // usamos el id del original como hilo
-            respondedAt = ahora
+        val body = EnviarMensajeRequest(
+            rutRemitente = rut,
+            contenido = contenido.trim()
         )
 
-        return dao.insert(respuesta)
+        return api.enviarMensajeCliente(
+            headerRut = rut,
+            headerRol = rol,
+            body = body
+        )
+    }
+
+    //Bandeja del cliente (sus mensajes + posible respuesta).
+    suspend fun obtenerBandejaUsuario(): List<MensajeConRespuestaDto> {
+        val (rut, rol) = headers()
+        return api.getBandejaUsuario(
+            rut = rut,
+            headerRut = rut,
+            headerRol = rol,
+            asc = false
+        )
+    }
+
+    //Bandeja de soporte: lista de hilos cliente ↔ soporte.
+    suspend fun obtenerBandejaSoporte(): List<MensajeConRespuestaDto> {
+        val (rut, rol) = headers()
+        return api.getBandejaSoporte(
+            headerRut = rut,
+            headerRol = rol,
+            asc = false
+        )
+    }
+
+    //Marcar mensaje como leído (lo usa quien recibe).
+    suspend fun marcarComoLeido(idMensaje: Long): SupportDto {
+        val (rut, rol) = headers()
+        return api.marcarMensajeLeido(
+            id = idMensaje,
+            headerRut = rut,
+            headerRol = rol
+        )
+    }
+
+    //Soporte ⇒ Cliente (responder al mensaje original).
+    suspend fun responderSoporteAlCliente(
+        originalId: Long,
+        contenido: String
+    ): SupportDto {
+        require(contenido.isNotBlank()) { "La respuesta no puede estar vacía" }
+
+        val (rut, rol) = headers()
+
+        val body = ResponderMensajeRequest(
+            rutSoporte = rut,
+            contenido = contenido.trim()
+        )
+
+        return api.responderMensajeCliente(
+            originalId = originalId,
+            headerRut = rut,
+            headerRol = rol,
+            body = body
+        )
+    }
+
+    //Obtener todos los mensajes de un hilo por idHilo.
+    suspend fun obtenerHilo(idHilo: Long): List<SupportDto> {
+        val (rut, rol) = headers()
+        return api.getMensajesPorHilo(
+            idHilo = idHilo,
+            headerRut = rut,
+            headerRol = rol
+        )
     }
 }
