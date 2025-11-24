@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.example.appstorefit_grupo1.R
+import com.example.appstorefit_grupo1.data.remote.RemoteModule
+import com.example.appstorefit_grupo1.data.remote.ServiceUrls
+import com.example.appstorefit_grupo1.data.remote.catalog.CatalogApi
 import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModel
 import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModelFactory
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
@@ -45,7 +48,8 @@ fun DetalleProductoScreen(
 ) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getInstance(context) }
-    val repo = remember { ProductosRepository(db.productosDao()) }
+    val api = remember { RemoteModule.create(ServiceUrls.CATALOG_BASE_URL, CatalogApi::class.java) }
+    val repo = remember { ProductosRepository(db.productosDao(), api) }
 
     // ViewModel del carrito para agregar directamente
     val carritoVm: CarritoViewModel =
