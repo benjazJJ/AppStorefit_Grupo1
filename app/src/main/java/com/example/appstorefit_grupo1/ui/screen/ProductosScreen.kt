@@ -21,6 +21,9 @@ import androidx.navigation.NavController
 import com.example.appstorefit_grupo1.R
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
+import com.example.appstorefit_grupo1.data.remote.RemoteModule
+import com.example.appstorefit_grupo1.data.remote.ServiceUrls
+import com.example.appstorefit_grupo1.data.remote.catalog.CatalogApi
 import com.example.appstorefit_grupo1.data.repository.ProductosRepository
 import com.example.appstorefit_grupo1.navigation.Route
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +65,8 @@ fun ProductosScreen(
 
     val context = LocalContext.current
     val db = remember { AppDatabase.getInstance(context) }
-    val repo = remember { ProductosRepository(db.productosDao()) }
+    val api = remember { RemoteModule.create(ServiceUrls.CATALOG_BASE_URL, CatalogApi::class.java) }
+    val repo = remember { ProductosRepository(db.productosDao(), api) }
 
     var items by remember { mutableStateOf<List<ProductoCardData>>(emptyList()) }
 
