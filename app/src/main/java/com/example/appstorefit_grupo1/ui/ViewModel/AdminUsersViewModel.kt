@@ -219,27 +219,8 @@ class AdminUsuariosViewModel(
     // EDITAR
 
     fun abrirEditar(rut: String) {
-        viewModelScope.launch {
-            val res = repositorio.adminGetUserByRut(rut)
-            res.onSuccess { u ->
-                _ui.update {
-                    it.copy(
-                        mostrarEditar = true,
-                        eRutPk = u.rut,
-                        eNombre2 = u.name,
-                        eEmail2 = u.email,
-                        eTelefono2 = u.phone.orEmpty(),
-                        eDireccion2 = u.address,
-                        eNacimiento2 = u.birthDate,
-                        errNombre2 = null,
-                        errTelefono2 = null,
-                        errNacimiento2 = validarNacimientoSeguro(u.birthDate),
-                    ).recalcularEditar()
-                }
-            }.onFailure { err ->
-                _ui.update { it.copy(mensajeError = err.message ?: "No se pudo cargar el usuario para editar") }
-            }
-        }
+        // Edición de datos deshabilitada: solo se permite asignar roles
+        _ui.update { it.copy(mensajeError = "La edición de datos está deshabilitada. Usa Asignar rol.") }
     }
 
     fun cerrarEditar() { _ui.update { it.copy(mostrarEditar = false) } }
@@ -264,29 +245,7 @@ class AdminUsuariosViewModel(
     }
 
     fun confirmarEditar() {
-        val s = _ui.value
-        if (!s.puedeEditar || s.editando) return
-
-        viewModelScope.launch {
-            _ui.update { it.copy(editando = true, mensajeError = null) }
-
-            val usuario = UserEntity(
-                rut = s.eRutPk,
-                name = s.eNombre2,
-                email = s.eEmail2,
-                phone = if (s.eTelefono2.isBlank()) null else s.eTelefono2,
-                address = s.eDireccion2,
-                birthDate = s.eNacimiento2
-            )
-
-            val res = repositorio.adminUpdateUser(usuario)
-            if (res.isSuccess) {
-                _ui.update { it.copy(mostrarEditar = false, editando = false) }
-                recargarUsuarios()
-            } else {
-                _ui.update { it.copy(editando = false, mensajeError = res.exceptionOrNull()?.message) }
-            }
-        }
+        // Edición de datos deshabilitada
     }
 
     fun abrirAsignarRol(rut: String) {

@@ -17,21 +17,61 @@ import com.example.appstorefit_grupo1.domain.validation.emailCanonico
 import com.example.appstorefit_grupo1.session.SessionManager
 import retrofit2.HttpException
 
-/**
- * Repositorio remoto (sin Room) que consume users-service.
- * Mantiene nombre y apellido por separado; la app solo muestra nombre en varios lugares.
- */
+// Repositorio remoto (sin Room) que consume users-service.
+// Mantiene nombre y apellido por separado; la app solo muestra nombre en varios lugares.
+
 class UserRepository(
     private val api: UsersApi
 ) {
-    // Helpers ---------------------------------------------------------------
+    // Helpers
     private fun phoneCanonico(raw: String?): String =
         raw?.filter { it.isDigit() }.orEmpty()
 
+    // Normaliza RUT con puntos si trae guion; de lo contrario devuelve el original
+    private fun dottedRut(rut: String): String {
+        if (rut.contains('.')) return rut
+        val cleaned = rut.replace(" ", "")
+        val hyphen = cleaned.lastIndexOf('-')
+        if (hyphen <= 0 || hyphen >= cleaned.length - 1) return rut
+        val body = cleaned.substring(0, hyphen)
+        val dv = cleaned.substring(hyphen + 1)
+        val sb = StringBuilder()
+        val len = body.length
+        var firstGroup = len % 3
+        if (firstGroup == 0) firstGroup = 3
+        sb.append(body.substring(0, firstGroup))
+        var i = firstGroup
+        while (i < len) {
+            sb.append('.').append(body.substring(i, i + 3))
+            i += 3
+        }
+        sb.append('-').append(dv)
+        return sb.toString()
+    }
+
+    private fun deriveRoleIdFromName(name: String?): Long? = name?.uppercase()?.let { role ->
+        when {
+            role.contains("ADMIN") -> 2L
+            role.contains("SOPORTE") -> 3L
+            role.contains("CLIENTE") -> 1L
+            else -> null
+        }
+    }
+
+    private fun deriveRoleNameFromId(id: Long?): String? = when (id) {
+        1L -> "CLIENTE"
+        2L -> "ADMIN"
+        3L -> "SOPORTE"
+        else -> null
+    }
+
     private fun headersOrThrow(): Pair<String, String> {
-        val rut = SessionManager.user?.rut ?: error("Sesión no disponible")
-        val rol = SessionManager.roleId?.toString() ?: "0"
-        return rut to rol
+        val rut = SessionManager.user?.rut ?: error("Sesion no disponible")
+        val roleName = SessionManager.roleName?.uppercase()
+            ?: deriveRoleNameFromId(SessionManager.roleId)
+            ?: deriveRoleNameFromId(deriveRoleIdFromName(SessionManager.roleName))
+        val headerRol = roleName ?: "0"
+        return rut to headerRol
     }
 
     private fun UsuarioDto.toUserEntity(): UserEntity =
@@ -67,7 +107,7 @@ class UserRepository(
             roleName = rolNombre
         )
 
-    // LOGIN -----------------------------------------------------------------
+    // LOGIN
     suspend fun login(email: String, pass: String): Result<UserEntity> {
         val correoCanonico = emailCanonico(email)
         if (correoCanonico.isBlank() || pass.isBlank()) {
@@ -79,11 +119,14 @@ class UserRepository(
                 throw IllegalArgumentException(resp.message ?: "Usuario o contrasena incorrectos")
             }
             val rut = resp.rut
-            val headerRol = resp.rolNombre ?: resp.rolId?.toString() ?: "0"
+            val roleName = resp.rolNombre?.uppercase() ?: deriveRoleNameFromId(resp.rolId)
+            val roleId = resp.rolId ?: deriveRoleIdFromName(roleName)
+            val headerRol = roleName ?: "0"
             val dto = api.getUsuarioPorRut(rut, headerRut = rut, headerRol = headerRol)
             val userEntity = dto.toUserEntity()
             SessionManager.user = userEntity
-            SessionManager.roleId = resp.rolId
+            SessionManager.roleId = roleId ?: resp.rolId
+            SessionManager.roleName = roleName
             SessionManager.lastName = dto.apellidos
             Result.success(userEntity)
         } catch (e: HttpException) {
@@ -98,7 +141,7 @@ class UserRepository(
         }
     }
 
-    // REGISTRO --------------------------------------------------------------
+    // REGISTRO
     suspend fun register(
         rut: String,
         name: String,
@@ -139,7 +182,7 @@ class UserRepository(
         }
     }
 
-    // CHECKS ---------------------------------------------------------------
+    // CHECKS
     suspend fun isEmailTaken(email: String): Boolean =
         emailCanonico(email).takeIf { it.isNotBlank() }?.let {
             try { !api.checkCorreo(it).available } catch (_: Exception) { false }
@@ -171,7 +214,7 @@ class UserRepository(
         } catch (_: Exception) { true }
     }
 
-    // CONTRASENA ------------------------------------------------------------
+    // CONTRASENA
     suspend fun changePassword(
         email: String,
         oldPass: String,
@@ -211,7 +254,7 @@ class UserRepository(
         }
     }
 
-    // PERFIL ----------------------------------------------------------------
+    // PERFIL
     suspend fun getUserByEmail(email: String): UserEntity? {
         val canon = emailCanonico(email)
         if (canon.isBlank()) return null
@@ -297,7 +340,7 @@ class UserRepository(
         }
     }
 
-    // FOTO -------------------------------------------------------------------
+    // FOTO
     suspend fun saveUserPhoto(email: String, uri: String): Result<Unit> {
         val canon = emailCanonico(email)
         if (canon.isBlank() || uri.isBlank()) return Result.failure(IllegalArgumentException("Datos inválidos"))
@@ -396,16 +439,18 @@ class UserRepository(
 
     // ADMIN - Roles
     suspend fun adminListRoles() = runCatching {
-        api.getRoles().map { AdminRoleRow(id = it.rolId, name = it.nombreRol) }
+        val (hRut, hRol) = headersOrThrow()
+        api.getRoles(hRut, hRol).map { AdminRoleRow(id = it.rolId, name = it.nombreRol) }
     }
 
     suspend fun adminAssignRoleToUser(rut: String, roleId: Long) = runCatching {
         val (hRut, hRol) = headersOrThrow()
         api.actualizarRolUsuario(
-            rut = rut,
+            rut = dottedRut(rut),
             body = UpdateRolRequest(rolId = roleId),
             headerRut = hRut,
             headerRol = hRol
         )
     }
 }
+

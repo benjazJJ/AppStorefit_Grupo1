@@ -17,8 +17,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -52,8 +50,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.appstorefit_grupo1.ui.ViewModel.AdminCategoriasViewModel
@@ -65,6 +61,7 @@ import com.example.appstorefit_grupo1.ui.ViewModel.AdminReportesViewModelFactory
 import com.example.appstorefit_grupo1.ui.ViewModel.AdminUsuariosUiState
 import com.example.appstorefit_grupo1.ui.ViewModel.AdminUsuariosViewModel
 import com.example.appstorefit_grupo1.ui.ViewModel.AdminsUsersViewModelFactory
+import com.example.appstorefit_grupo1.session.SessionManager
 import com.example.appstorefit_grupo1.data.local.Productos.ProductosEntity
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.ui.ViewModel.ProductoFormState
@@ -73,6 +70,32 @@ import com.example.appstorefit_grupo1.ui.ViewModel.ProductoFormState
 @Composable
 fun AdminScreen(navController: NavController) {
     val cs = MaterialTheme.colorScheme
+    val roleId = SessionManager.roleId
+    val roleName = SessionManager.roleName?.uppercase()
+    val esAdmin = roleId == 2L || roleName?.contains("ADMIN") == true
+    if (!esAdmin) {
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text("Panel de Administraci\u00f3n", fontWeight = FontWeight.Bold) },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = cs.surface,
+                        titleContentColor = cs.onSurface
+                    )
+                )
+            }
+        ) { inner ->
+            Box(
+                modifier = Modifier
+                    .padding(inner)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Solo administradores pueden acceder a este panel.")
+            }
+        }
+        return
+    }
 
     val tabs = listOf(
         AdminTab.Usuarios,
@@ -158,14 +181,13 @@ private fun AdminUsuariosTab() {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Usuarios registrados", style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { vm.abrirCrear() }) { Text("Crear usuario") }
-        }
+          Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween,
+              modifier = Modifier.fillMaxWidth()
+          ) {
+              Text("Usuarios registrados", style = MaterialTheme.typography.titleMedium)
+          }
 
         if (estado.cargando) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -180,7 +202,7 @@ private fun AdminUsuariosTab() {
         }
 
         if (estado.usuarios.isEmpty()) {
-            EmptyState("Sin usuarios.\nUsa “Crear usuario” para agregar uno nuevo.")
+            EmptyState("Sin usuarios para mostrar.")
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(estado.usuarios) { row ->
@@ -193,10 +215,6 @@ private fun AdminUsuariosTab() {
                             },
                             trailingContent = {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    // EDITAR
-                                    IconButton(onClick = { vm.abrirEditar(row.rut) }) {
-                                        Icon(Icons.Filled.Edit, contentDescription = "Editar")
-                                    }
                                     // ASIGNAR ROL
                                     IconButton(onClick = { vm.abrirAsignarRol(row.rut) }) {
                                         Icon(Icons.Filled.Badge, contentDescription = "Asignar rol")
@@ -212,79 +230,7 @@ private fun AdminUsuariosTab() {
 
 
     // Editar usuario (fecha de nacimiento y dirección bloqueadas por política)
-    if (estado.mostrarEditar) {
-        AlertDialog(
-            onDismissRequest = { vm.cerrarEditar() },
-            confirmButton = {
-                TextButton(
-                    onClick = { vm.confirmarEditar() },
-                    enabled = estado.puedeEditar && !estado.editando
-                ) {
-                    if (estado.editando) {
-                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                    }
-                    Text("Guardar")
-                }
-            },
-            dismissButton = { TextButton(onClick = { vm.cerrarEditar() }) { Text("Cancelar") } },
-            title = { Text("Editar usuario") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                    OutlinedTextField(
-                        value = estado.eRutPk,
-                        onValueChange = { /* no editable */ },
-                        label = { Text("RUT") },
-                        singleLine = true,
-                        enabled = false,
-                        readOnly = true
-                    )
-
-                    OutlinedTextField(
-                        value = estado.eNombre2,
-                        onValueChange = vm::onCambiarNombreEditar,
-                        label = { Text("Nombre") },
-                        isError = estado.errNombre2 != null,
-                        singleLine = true
-                    )
-                    estado.errNombre2?.let {
-                        Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                    }
-
-                    OutlinedTextField(
-                        value = estado.eTelefono2,
-                        onValueChange = vm::onCambiarTelefonoEditar,
-                        label = { Text("Teléfono (opcional)") },
-                        isError = estado.errTelefono2 != null,
-                        singleLine = true
-                    )
-                    estado.errTelefono2?.let {
-                        Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall)
-                    }
-
-                    // BLOQUEADOS POR POLÍTICA
-                    OutlinedTextField(
-                        value = estado.eDireccion2,
-                        onValueChange = { },
-                        label = { Text("Dirección (no editable)") },
-                        singleLine = true,
-                        enabled = false,
-                        readOnly = true
-                    )
-
-                    OutlinedTextField(
-                        value = estado.eNacimiento2,
-                        onValueChange = { },
-                        label = { Text("Fecha de nacimiento (no editable)") },
-                        singleLine = true,
-                        enabled = false,
-                        readOnly = true
-                    )
-                }
-            }
-        )
-    }
+    // Edición de datos deshabilitada: solo se permite asignar roles
 
     // Asignar rol
     if (estado.mostrarAsignarRol) {
@@ -346,10 +292,6 @@ private fun AdminUsuariosTab() {
         )
     }
 
-    // Crear usuario (UI)
-    if (estado.mostrarCrear) {
-        CrearUsuarioDialog(estado = estado, vm = vm)
-    }
 }
 
 
@@ -1259,141 +1201,4 @@ private fun EmptyState(message: String) {
     }
 }
 
-//CREAR USUARIO (UI)
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CrearUsuarioDialog(
-    estado: AdminUsuariosUiState,
-    vm: AdminUsuariosViewModel
-) {
-    val cs = MaterialTheme.colorScheme
-    var rolesExpanded by remember { mutableStateOf(false) }
-    val roles = estado.rolesDisponibles
 
-    AlertDialog(
-        onDismissRequest = { vm.cerrarCrear() },
-        confirmButton = {
-            TextButton(
-                onClick = { vm.confirmarCrear() },
-                enabled = estado.puedeCrear && !estado.creando
-            ) {
-                if (estado.creando) {
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                }
-                Text("Crear")
-            }
-        },
-        dismissButton = { TextButton(onClick = { vm.cerrarCrear() }) { Text("Cancelar") } },
-        title = { Text("Crear usuario") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                OutlinedTextField(
-                    value = estado.cRut,
-                    onValueChange = vm::onCambiarRutCrear,
-                    label = { Text("RUT") },
-                    singleLine = true,
-                    isError = estado.errRut != null
-                )
-                estado.errRut?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-
-                OutlinedTextField(
-                    value = estado.cNombre,
-                    onValueChange = vm::onCambiarNombreCrear,
-                    label = { Text("Nombre") },
-                    singleLine = true,
-                    isError = estado.errNombre != null
-                )
-                estado.errNombre?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-
-                OutlinedTextField(
-                    value = estado.cEmail,
-                    onValueChange = vm::onCambiarEmailCrear,
-                    label = { Text("Email") },
-                    singleLine = true,
-                    isError = estado.errEmail != null
-                )
-                estado.errEmail?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-
-                // Contraseña
-                var mostrarPass by remember { mutableStateOf(false) }
-                OutlinedTextField(
-                    value = estado.cPassword,
-                    onValueChange = vm::onCambiarPasswordCrear,
-                    label = { Text("Contraseña") },
-                    singleLine = true,
-                    isError = estado.errPassword != null,
-                    visualTransformation = if (mostrarPass) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { mostrarPass = !mostrarPass }) {
-                            Icon(
-                                imageVector = if (mostrarPass) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = null
-                            )
-                        }
-                    }
-                )
-                estado.errPassword?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-
-
-
-                OutlinedTextField(
-                    value = estado.cTelefono,
-                    onValueChange = vm::onCambiarTelefonoCrear,
-                    label = { Text("Teléfono") },
-                    singleLine = true,
-                    isError = estado.errTelefono != null
-                )
-                estado.errTelefono?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-
-                OutlinedTextField(
-                    value = estado.cDireccion,
-                    onValueChange = vm::onCambiarDireccionCrear,
-                    label = { Text("Dirección") },
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = estado.cNacimiento,
-                    onValueChange = vm::onCambiarNacimientoCrear,
-                    label = { Text("Fecha de nacimiento (yyyy-MM-dd)") },
-                    singleLine = true,
-                    isError = estado.errNacimiento != null
-                )
-                estado.errNacimiento?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-
-                // Rol
-                ExposedDropdownMenuBox(
-                    expanded = rolesExpanded,
-                    onExpandedChange = { rolesExpanded = !rolesExpanded }
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier.menuAnchor(),
-                        value = estado.cRolNombreSeleccionado ?: "",
-                        onValueChange = { },
-                        readOnly = true,
-                        label = { Text("Rol") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = rolesExpanded) },
-                        isError = estado.errRol != null
-                    )
-                    ExposedDropdownMenu(
-                        expanded = rolesExpanded,
-                        onDismissRequest = { rolesExpanded = false }
-                    ) {
-                        roles.forEach { rol ->
-                            DropdownMenuItem(
-                                text = { Text(rol.name) },
-                                onClick = {
-                                    vm.onSeleccionarRolCrear(rol.id, rol.name)
-                                    rolesExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-                estado.errRol?.let { Text(it, color = cs.error, style = MaterialTheme.typography.labelSmall) }
-            }
-        }
-    )
-}
