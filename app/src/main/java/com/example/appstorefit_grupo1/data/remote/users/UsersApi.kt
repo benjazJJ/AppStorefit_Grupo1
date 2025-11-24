@@ -82,12 +82,17 @@ interface UsersApi {
 
     // Listar todos los roles
     @GET("api/v1/roles")
-    suspend fun getRoles(): List<RolDto>
+    suspend fun getRoles(
+        @Header("X-User-Rut") headerRut: String,
+        @Header("X-User-Rol") headerRol: String
+    ): List<RolDto>
 
     // Obtener un rol por id
     @GET("api/v1/roles/{id}")
     suspend fun getRolPorId(
-        @Path("id") id: Long
+        @Path("id") id: Long,
+        @Header("X-User-Rut") headerRut: String,
+        @Header("X-User-Rol") headerRol: String
     ): RolDto
 
     // Actualizar el rol de un usuario y devolver el usuario actualizado

@@ -17,7 +17,9 @@ class ProductosRepository(
 
     // Verificación de permisos: solo ADMIN (roleId = 2L) puede crear/editar/eliminar/ajustar stock
     private fun exigirAdmin() {
-        require(SessionManager.roleId == 2L) { "Solo un ADMIN puede realizar esta acción." }
+        val esAdmin = SessionManager.roleId == 2L ||
+                SessionManager.roleName?.uppercase() == "ADMIN"
+        require(esAdmin) { "Solo un ADMIN puede realizar esta acción." }
     }
 
     // Observables (no requieren permisos)

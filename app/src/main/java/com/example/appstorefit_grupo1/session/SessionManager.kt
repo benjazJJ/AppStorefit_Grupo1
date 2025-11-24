@@ -6,14 +6,24 @@ import com.example.appstorefit_grupo1.data.local.user.UserEntity
 // Sesión simple en memoria + helpers para persistir con DataStore
 
 object SessionManager {
+    private fun deriveRoleIdFromName(name: String?): Long? = name?.uppercase()?.let {
+        when {
+            it.contains("ADMIN") -> 2L
+            it.contains("SOPORTE") -> 3L
+            it.contains("CLIENTE") -> 1L
+            else -> null
+        }
+    }
     @Volatile var user: UserEntity? = null
     @Volatile var roleId: Long? = null
+    @Volatile var roleName: String? = null
     @Volatile var lastName: String? = null
 
     //Limpia solo memoria
     fun clear() {
         user = null
         roleId = null
+        roleName = null
         lastName = null
     }
 
@@ -29,7 +39,8 @@ object SessionManager {
             birthDate = s.birthDate ?: "",
             photoUri = null
         )
-        roleId = s.roleId
+        roleId = (if (s.roleId > 0) s.roleId else deriveRoleIdFromName(s.roleName))
+        roleName = s.roleName
         lastName = s.lastName
     }
 
@@ -45,7 +56,8 @@ object SessionManager {
             address = u.address,
             phone = u.phone,
             birthDate = u.birthDate.ifBlank { null },
-            roleId = roleId ?: 0L
+            roleId = roleId ?: 0L,
+            roleName = roleName
         )
     }
 
@@ -55,5 +67,7 @@ object SessionManager {
         SessionStore.clear(context)
     }
 }
+
+
 
 
