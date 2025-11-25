@@ -26,17 +26,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
 import com.example.appstorefit_grupo1.data.repository.ItemCarritoSnapshot
 import com.example.appstorefit_grupo1.session.SessionManager
 import kotlinx.coroutines.launch
 import com.example.appstorefit_grupo1.R
 import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModel
 import com.example.appstorefit_grupo1.ui.ViewModel.CarritoViewModelFactory
-import com.example.appstorefit_grupo1.ui.ViewModel.ComprasViewModel
-import com.example.appstorefit_grupo1.ui.ViewModel.ComprasViewModelFactory
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.navigation.Route
 import com.example.appstorefit_grupo1.ui.components.SuccessCheckoutDialog
+import com.example.appstorefit_grupo1.ui.ViewModel.OrdersViewModel
+import com.example.appstorefit_grupo1.ui.ViewModel.OrdersViewModelFactory
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -50,8 +51,11 @@ fun CarritoScreen(navController: NavHostController) {
 
     val carritoDao = remember { AppDatabase.getInstance(ctx).carritoDao() }
     val vm: CarritoViewModel = viewModel(factory = CarritoViewModelFactory(ctx, carritoDao))
-    // VM de Compras para registrar la compra en BD
-    val comprasVm: ComprasViewModel = viewModel(factory = ComprasViewModelFactory(ctx))
+
+    // ViewModel remoto de ORDERS (microservicio)
+    val ordersVm: OrdersViewModel = viewModel(factory = OrdersViewModelFactory())
+    val crearCompraState by ordersVm.crearCompra.collectAsStateWithLifecycle()
+
     val state by vm.uiState.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -66,10 +70,29 @@ fun CarritoScreen(navController: NavHostController) {
     val evento = vm.eventos.collectAsState(initial = null).value
     LaunchedEffect(evento) {
         evento?.let { msg ->
-            if (msg.startsWith("Compra confirmada")) {
-                mostrarDialogoExito = true
-            }
+            // Mensajes generales del carrito (agregar, eliminar, etc.)
             snackbarHostState.showSnackbar(message = msg)
+        }
+    }
+
+    // Reaccionar al resultado del microservicio ORDERS
+    LaunchedEffect(crearCompraState.compraCreada, crearCompraState.error) {
+        crearCompraState.compraCreada?.let {
+            // Vaciar carrito local + enviar evento en CarritoViewModel
+            vm.onComprar()
+
+            mostrarDialogoExito = true
+            scope.launch {
+                snackbarHostState.showSnackbar("Compra confirmada en servidor")
+            }
+            ordersVm.resetCrearCompraState()
+        }
+
+        crearCompraState.error?.let { msg ->
+            scope.launch {
+                snackbarHostState.showSnackbar(msg)
+            }
+            ordersVm.resetCrearCompraState()
         }
     }
 
@@ -193,7 +216,7 @@ fun CarritoScreen(navController: NavHostController) {
 
                             val rut = SessionManager.user?.rut
                             if (rut.isNullOrBlank()) {
-                                scope.launch {                       //
+                                scope.launch {
                                     snackbarHostState.showSnackbar("Inicia sesión para comprar")
                                 }
                                 return@Button
@@ -201,17 +224,15 @@ fun CarritoScreen(navController: NavHostController) {
 
                             val itemsSnapshot = state.items.map { it ->
                                 ItemCarritoSnapshot(
-                                    idProducto = it.idProducto,
+                                    idProducto = resolveProductoId(it),
                                     nombreProducto = "${it.modelo} (${it.color}) T${it.talla}",
                                     cantidad = it.cantidad,
                                     precioUnitario = it.precioUnitario
                                 )
                             }
 
-                            // Registrar compra y luego continuar
-                            comprasVm.registrarCompra(rut, itemsSnapshot) {
-                                vm.onComprar()
-                            }
+                            // Llamar al microservicio ORDERS
+                            ordersVm.crearCompraDesdeCarrito(itemsSnapshot)
                         },
                         enabled = state.items.isNotEmpty(),
                         modifier = Modifier.weight(1f)
@@ -370,4 +391,21 @@ private fun modeloToDrawable(modelo: String, color: String): Int {
 private fun Int.toCLP(): String {
     val f = NumberFormat.getNumberInstance(Locale("es", "CL"))
     return "$" + f.format(this)
+}
+
+// Ajusta el idProducto a los IDs reales del catálogo (1001..4010) para evitar enviar IDs de seed local (1,2,3).
+private fun resolveProductoId(item: CarritoEntity): Long {
+    val baseModelo = item.modelo.removePrefix("B").uppercase()
+    val tallaIdx = listOf("XS", "S", "M", "L", "XL").indexOf(item.talla.uppercase())
+    if (tallaIdx == -1) return item.idProducto
+
+    val esBlanco = item.color.equals(COLOR_BLANCO, ignoreCase = true) || item.modelo.startsWith("B", ignoreCase = true)
+    val baseId = when (baseModelo) {
+        "XFITRX"    -> if (esBlanco) 1006L else 1001L
+        "WARMGLIDE" -> if (esBlanco) 2006L else 2001L
+        "FLEXRUN"   -> if (esBlanco) 3006L else 3001L
+        "FITQUEEN"  -> if (esBlanco) 4006L else 4001L
+        else        -> item.idProducto
+    }
+    return baseId + tallaIdx
 }

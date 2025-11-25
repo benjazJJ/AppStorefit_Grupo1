@@ -14,8 +14,8 @@ import com.example.appstorefit_grupo1.session.SessionManager
 import androidx.compose.ui.platform.LocalContext
 import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun SplashScreen(navController: NavController) {
