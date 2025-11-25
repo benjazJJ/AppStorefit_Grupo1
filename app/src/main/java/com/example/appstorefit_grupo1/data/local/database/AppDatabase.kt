@@ -131,116 +131,67 @@ abstract class AppDatabase : RoomDatabase() {
                 cDao.insert(CategoriaEntity(nombre = "Conjunto Femenino"))
             }
 
-            //Productos (exactamente 4, uno por categoría)
+            //Productos precargados alineados con el catálogo remoto
             val hayProductos = kotlin.runCatching { pDao.count() }.getOrDefault(0) > 0
             if (!hayProductos) {
-                data class ProdBase(val idCat: Long, val modelo: String, val precio: Int)
+                data class ModeloBase(val idCat: Long, val modelo: String, val precio: Int)
 
-                val base = listOf(
-                    ProdBase(1L, "XFITRX",    9990),   // Poleras
-                    ProdBase(2L, "WARMGLIDE", 17990),  // Poleron
-                    ProdBase(3L, "FLEXRUN",   14990),  // Buzo
-                    ProdBase(4L, "FITQUEEN",  19990)   // Conjunto Femenino
+                val modelos = listOf(
+                    ModeloBase(1L, "XFITRX", 9990),
+                    ModeloBase(2L, "WARMGLIDE", 17990),
+                    ModeloBase(3L, "FLEXRUN", 14990),
+                    ModeloBase(4L, "FITQUEEN", 19990)
                 )
 
-                val colorUnico = "Negro con detalles blancos"
-                val tallaUnica = "M"
-                val stockIni   = 80
-
-                base.forEach { spec ->
-                    pDao.insert(
-                        ProductosEntity(
-                            idCategoria = spec.idCat,
-                            idProducto  = 1L,
-                            marca       = "StoreFit",
-                            modelo      = spec.modelo,
-                            color       = colorUnico,
-                            talla       = tallaUnica,
-                            precio      = spec.precio,
-                            stock       = stockIni
-                        )
-                    )
-                }
-            }
-
-            //Variantes por modelo: Negro/Blanco x XS..XL
-            run {
                 val tallas = listOf("XS","S","M","L","XL")
-                val COLOR_NEGRO  = "Negro con detalles blancos"
+                val COLOR_NEGRO = "Negro con detalles blancos"
                 val COLOR_BLANCO = "Blanco con detalles negros"
+                val stockInicial = 80
 
-                val existentes = pDao.getAll()
-
-                data class ModeloBase(val idCat: Long, val modelo: String, val precio: Int)
-                val modelosBase = existentes
-                    .groupBy { it.idCategoria }
-                    .flatMap { (idCat, lista) ->
-                        // normaliza quitando prefijo B para agrupar
-                        val modelosDistinct = lista
-                            .map { it.modelo.removePrefix("B") }
-                            .distinct()
-
-                        modelosDistinct.map { mb ->
-                            // referencia para precio (si no hay exacto, usa cualquiera)
-                            val ref = lista.firstOrNull { it.modelo == mb } ?: lista.first()
-                            ModeloBase(idCat = idCat, modelo = mb, precio = ref.precio)
-                        }
-                    }
-
-                // Generar combinaciones faltantes
-                modelosBase.forEach { base ->
-                    var nextId = (pDao.getMaxIdForCategory(base.idCat) ?: 0L) + 1L
-                    val aInsertar = mutableListOf<ProductosEntity>()
-
-                    // 1) Negro (modelo base)
-                    for (t in tallas) {
-                        val yaExiste = pDao.countByCatModeloColorTalla(
-                            idCategoria = base.idCat,
-                            modelo = base.modelo,
-                            color = COLOR_NEGRO,
-                            talla = t
-                        ) > 0
-                        if (!yaExiste) {
-                            aInsertar += ProductosEntity(
-                                idCategoria = base.idCat,
-                                idProducto  = nextId++,
-                                marca       = "StoreFit",
-                                modelo      = base.modelo,
-                                color       = COLOR_NEGRO,
-                                talla       = t,
-                                precio      = base.precio,
-                                stock       = 80
+                modelos.forEach { spec ->
+                    val baseId = spec.idCat * 1000
+                    listOf(COLOR_NEGRO to 0, COLOR_BLANCO to 5).forEach { (color, offset) ->
+                        tallas.forEachIndexed { index, talla ->
+                            val idProducto = baseId + offset + index + 1
+                            pDao.insert(
+                                ProductosEntity(
+                                    idCategoria = spec.idCat,
+                                    idProducto = idProducto,
+                                    marca = "StoreFit",
+                                    modelo = spec.modelo,
+                                    color = color,
+                                    talla = talla,
+                                    precio = spec.precio,
+                                    stock = stockInicial
+                                )
                             )
                         }
-                    }
-
-                    // 2) Blanco (modelo con prefijo B)
-                    val modeloBlanco = "B${base.modelo}"
-                    for (t in tallas) {
-                        val yaExiste = pDao.countByCatModeloColorTalla(
-                            idCategoria = base.idCat,
-                            modelo = modeloBlanco,
-                            color = COLOR_BLANCO,
-                            talla = t
-                        ) > 0
-                        if (!yaExiste) {
-                            aInsertar += ProductosEntity(
-                                idCategoria = base.idCat,
-                                idProducto  = nextId++,
-                                marca       = "StoreFit",
-                                modelo      = modeloBlanco,
-                                color       = COLOR_BLANCO,
-                                talla       = t,
-                                precio      = base.precio,
-                                stock       = 80
-                            )
-                        }
-                    }
-
-                    if (aInsertar.isNotEmpty()) {
-                        pDao.insertAll(aInsertar)
                     }
                 }
+
+                // fallback IDs bajos usados por la app (ej. id_producto 2 y 3)
+                listOf(
+                    ProductosEntity(
+                        idCategoria = 3L,
+                        idProducto = 2L,
+                        marca = "StoreFit",
+                        modelo = "FLEXRUN",
+                        color = COLOR_NEGRO,
+                        talla = "L",
+                        precio = 14990,
+                        stock = 80
+                    ),
+                    ProductosEntity(
+                        idCategoria = 3L,
+                        idProducto = 3L,
+                        marca = "StoreFit",
+                        modelo = "FLEXRUN",
+                        color = COLOR_NEGRO,
+                        talla = "XL",
+                        precio = 14990,
+                        stock = 80
+                    )
+                ).forEach { pDao.insert(it) }
             }
         }
     }

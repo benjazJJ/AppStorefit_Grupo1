@@ -44,6 +44,14 @@ class AdminProductsViewModel(
     private val repo: ProductosRepository
 ) : ViewModel() {
 
+    init {
+        viewModelScope.launch {
+            repo.getAll().exceptionOrNull()?.message?.let {
+                _error.value = it
+            }
+        }
+    }
+
     // Lista reactiva de variantes
     val productos: StateFlow<List<ProductosEntity>> =
         repo.observeAll()

@@ -8,6 +8,7 @@ import com.example.appstorefit_grupo1.data.remote.dto.catalog.ProductoIdDto
 import com.example.appstorefit_grupo1.data.remote.dto.catalog.StockReservaItemDto
 import com.example.appstorefit_grupo1.session.SessionManager
 import kotlinx.coroutines.flow.Flow
+import retrofit2.HttpException
 
 /**
  * Repositorio remoto que trabaja contra catalog-service.
@@ -79,6 +80,28 @@ class ProductosRepository(
         }
     }
 
+    private suspend fun findRemoteVariantRemoteId(
+        local: ProductosEntity,
+        rut: String,
+        rol: String
+    ): Long? {
+        val remoteList = api.getProductosPorCategoria(
+            categoriaId = local.idCategoria,
+            headerRut = rut,
+            headerRol = rol
+        )
+        return remoteList.firstOrNull { matches(local, it) }
+            ?.id?.idProducto
+    }
+
+    private fun matches(local: ProductosEntity, dto: ProductoDto): Boolean {
+        val colorMatch = normalizarColor(dto.color) == local.color
+        val tallaMatch = dto.talla.equals(local.talla, ignoreCase = true)
+        val modeloMatch = dto.modelo.equals(local.modelo, ignoreCase = true)
+            || dto.modelo.equals("B${local.modelo}", ignoreCase = true)
+        return colorMatch && tallaMatch && modeloMatch
+    }
+
     // Cachea sin borrar para no gatillar cascadas que vacíen el carrito
     private suspend fun cacheAll(productos: List<ProductosEntity>) {
         dao.upsertAll(productos) // evita cascada sobre carrito
@@ -144,20 +167,32 @@ class ProductosRepository(
         if (nuevoStock < 0) return Result.failure(IllegalArgumentException("El stock no puede ser negativo"))
         return runCatching {
             val (rut, rol) = headersOrThrow()
+            val local = dao.getByIds(idCategoria, idProducto)
+            val remoteId = local?.let { findRemoteVariantRemoteId(it, rut, rol) } ?: idProducto
             val dto = api.getProductoPorIds(
                 categoriaId = idCategoria,
-                productoId = idProducto,
+                productoId = remoteId,
                 headerRut = rut,
                 headerRol = rol
             )
             val updated = api.actualizarProducto(
                 categoriaId = idCategoria,
-                productoId = idProducto,
+                productoId = remoteId,
                 body = dto.copy(stock = nuevoStock),
                 headerRut = rut,
                 headerRol = rol
             )
-            dao.upsert(updated.data.toEntity())
+            val updatedEntity = updated.data.toEntity()
+            dao.upsert(updatedEntity)
+            if (local != null && local.idProducto != updatedEntity.idProducto) {
+                dao.deleteByIds(local.idCategoria, local.idProducto)
+            }
+        }.recoverCatching { err ->
+            if (err is HttpException && err.code() == 404) {
+                dao.updateStock(idCategoria, idProducto, nuevoStock)
+            } else {
+                throw err
+            }
         }
     }
 
@@ -171,9 +206,11 @@ class ProductosRepository(
 
         return runCatching {
             val (rut, rol) = headersOrThrow()
+            val local = dao.getByIds(idCategoria, idProducto)
+            val remoteId = local?.let { findRemoteVariantRemoteId(it, rut, rol) } ?: idProducto
             val dto = api.getProductoPorIds(
                 categoriaId = idCategoria,
-                productoId = idProducto,
+                productoId = remoteId,
                 headerRut = rut,
                 headerRol = rol
             )
@@ -181,12 +218,25 @@ class ProductosRepository(
             if (nuevo < 0) error("El stock no puede quedar negativo")
             val updated = api.actualizarProducto(
                 categoriaId = idCategoria,
-                productoId = idProducto,
+                productoId = remoteId,
                 body = dto.copy(stock = nuevo),
                 headerRut = rut,
                 headerRol = rol
             )
-            dao.upsert(updated.data.toEntity())
+            val updatedEntity = updated.data.toEntity()
+            dao.upsert(updatedEntity)
+            if (local != null && local.idProducto != updatedEntity.idProducto) {
+                dao.deleteByIds(local.idCategoria, local.idProducto)
+            }
+        }.recoverCatching { err ->
+            if (err is HttpException && err.code() == 404) {
+                val current = dao.getByIds(idCategoria, idProducto)
+                if (current != null) {
+                    dao.updateStock(idCategoria, idProducto, current.stock + delta)
+                }
+            } else {
+                throw err
+            }
         }
     }
 
