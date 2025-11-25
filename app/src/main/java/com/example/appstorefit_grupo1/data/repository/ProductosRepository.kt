@@ -201,7 +201,9 @@ class ProductosRepository(
         stock: Int,
         marca: String = "StoreFit"
     ): Result<Pair<Long, Long>> {
-        exigirAdmin()
+        if (SessionManager.roleId != 2L) {
+            return Result.failure(IllegalStateException("Solo un ADMIN puede realizar esta accion."))
+        }
 
         val modeloT = modelo.trim()
         val colorT = color.trim()
