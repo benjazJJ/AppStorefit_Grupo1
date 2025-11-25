@@ -1,11 +1,12 @@
 package com.example.appstorefit_grupo1.domain.validation
 
+import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import kotlin.test.assertEquals
+
 
 //Importamos
 @RunWith(RobolectricTestRunner::class)
