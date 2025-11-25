@@ -209,7 +209,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 color       = COLOR_NEGRO,
                                 talla       = t,
                                 precio      = base.precio,
-                                stock       = if (t == "M") 80 else 30
+                                stock       = 80
                             )
                         }
                     }
@@ -232,7 +232,7 @@ abstract class AppDatabase : RoomDatabase() {
                                 color       = COLOR_BLANCO,
                                 talla       = t,
                                 precio      = base.precio,
-                                stock       = 30
+                                stock       = 80
                             )
                         }
                     }

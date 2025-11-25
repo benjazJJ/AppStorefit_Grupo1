@@ -2,26 +2,38 @@ package com.example.appstorefit_grupo1.ui.ViewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.appstorefit_grupo1.data.local.database.AppDatabase
 import com.example.appstorefit_grupo1.data.local.user.AdminUserRow
-import kotlinx.coroutines.flow.SharingStarted
+import com.example.appstorefit_grupo1.data.repository.UserRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class AdminReportesViewModel(db: AppDatabase) : ViewModel() {
+class AdminReportesViewModel(
+    private val userRepository: UserRepository
+) : ViewModel() {
 
-    private val userDao = db.userDao()
-    private val registroDao = db.registroDao()
+    private val _totalUsuarios = MutableStateFlow(0)
+    val totalUsuarios: StateFlow<Int> = _totalUsuarios
 
-    // total de usuarios en vivo
-    val totalUsuarios: StateFlow<Int> =
-        userDao.observeCount()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+    private val _ultimosRegistrados = MutableStateFlow<List<AdminUserRow>>(emptyList())
+    val ultimosRegistrados: StateFlow<List<AdminUserRow>> = _ultimosRegistrados
 
-    // últimos registrados (usando AdminUserRow)
-    val ultimosRegistrados: StateFlow<List<AdminUserRow>> =
-        registroDao.observeUltimosAdminUsers(limitRows = 20)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    init {
+        refresh()
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            userRepository.adminListUsers()
+                .onSuccess { list ->
+                    _totalUsuarios.value = list.size
+                    // Sin fecha de creación en el DTO remoto; tomamos los últimos 20 del listado recibido.
+                    _ultimosRegistrados.value = list.takeLast(20).reversed()
+                }
+                .onFailure {
+                    _totalUsuarios.value = 0
+                    _ultimosRegistrados.value = emptyList()
+                }
+        }
+    }
 }
-
-

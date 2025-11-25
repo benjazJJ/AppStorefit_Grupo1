@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.example.appstorefit_grupo1.data.local.Carrito.CarritoEntity
 import com.example.appstorefit_grupo1.data.repository.ItemCarritoSnapshot
 import com.example.appstorefit_grupo1.session.SessionManager
 import kotlinx.coroutines.launch
@@ -223,7 +224,7 @@ fun CarritoScreen(navController: NavHostController) {
 
                             val itemsSnapshot = state.items.map { it ->
                                 ItemCarritoSnapshot(
-                                    idProducto = it.idProducto,
+                                    idProducto = resolveProductoId(it),
                                     nombreProducto = "${it.modelo} (${it.color}) T${it.talla}",
                                     cantidad = it.cantidad,
                                     precioUnitario = it.precioUnitario
@@ -390,4 +391,21 @@ private fun modeloToDrawable(modelo: String, color: String): Int {
 private fun Int.toCLP(): String {
     val f = NumberFormat.getNumberInstance(Locale("es", "CL"))
     return "$" + f.format(this)
+}
+
+// Ajusta el idProducto a los IDs reales del catálogo (1001..4010) para evitar enviar IDs de seed local (1,2,3).
+private fun resolveProductoId(item: CarritoEntity): Long {
+    val baseModelo = item.modelo.removePrefix("B").uppercase()
+    val tallaIdx = listOf("XS", "S", "M", "L", "XL").indexOf(item.talla.uppercase())
+    if (tallaIdx == -1) return item.idProducto
+
+    val esBlanco = item.color.equals(COLOR_BLANCO, ignoreCase = true) || item.modelo.startsWith("B", ignoreCase = true)
+    val baseId = when (baseModelo) {
+        "XFITRX"    -> if (esBlanco) 1006L else 1001L
+        "WARMGLIDE" -> if (esBlanco) 2006L else 2001L
+        "FLEXRUN"   -> if (esBlanco) 3006L else 3001L
+        "FITQUEEN"  -> if (esBlanco) 4006L else 4001L
+        else        -> item.idProducto
+    }
+    return baseId + tallaIdx
 }
