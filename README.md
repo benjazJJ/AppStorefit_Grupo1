@@ -130,7 +130,7 @@ Emulador o dispositivo (SDK 24+).
 ## 👤 Créditos
 
 **StoreFit — Grupo 1**  
-Benjamín Palma y Gustavo Espinoza
+Benjamín Palma, Gustavo Espinoza, Benjamín Leal
 
 > Para consultas, contacta a los autores. **Repositorio de solo lectura**: no acepta cambios externos.
 
